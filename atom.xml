@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://zwlovefish.github.io/"/>
-  <updated>2020-03-15T09:05:54.897Z</updated>
+  <updated>2020-03-15T09:14:36.744Z</updated>
   <id>http://zwlovefish.github.io/</id>
   
   <author>
@@ -21,7 +21,7 @@
     <link href="http://zwlovefish.github.io/2020/03/15/%E6%B5%8B%E8%AF%95%E5%9B%BE%E7%89%87%E7%9A%84%E6%8F%92%E5%85%A5/"/>
     <id>http://zwlovefish.github.io/2020/03/15/%E6%B5%8B%E8%AF%95%E5%9B%BE%E7%89%87%E7%9A%84%E6%8F%92%E5%85%A5/</id>
     <published>2020-03-15T08:54:34.000Z</published>
-    <updated>2020-03-15T09:05:54.897Z</updated>
+    <updated>2020-03-15T09:14:36.744Z</updated>
     
     <content type="html"><![CDATA[<p>看到一篇博客说可以在source文件夹下创建一个images文件夹，然后将要插入的图片都放到该文件夹中即可，在新的博客中要引用该图片时在()里面写  /images/picture.png 即可</p><p><img src="/images/avatar.jpg" alt="win头像"></p>]]></content>
     
