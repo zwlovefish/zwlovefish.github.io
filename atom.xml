@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://zwlovefish.github.io/"/>
-  <updated>2020-05-17T06:32:10.307Z</updated>
+  <updated>2020-05-17T07:01:42.873Z</updated>
   <id>http://zwlovefish.github.io/</id>
   
   <author>
@@ -18,16 +18,16 @@
   
   <entry>
     <title>Sprigboot使用探秘</title>
-    <link href="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98%E4%B9%8B%E5%88%9D%E5%A7%8B%E5%8C%96Springboot%E9%A1%B9%E7%9B%AE/"/>
-    <id>http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98%E4%B9%8B%E5%88%9D%E5%A7%8B%E5%8C%96Springboot%E9%A1%B9%E7%9B%AE/</id>
+    <link href="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/"/>
+    <id>http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/</id>
     <published>2020-05-17T05:01:26.000Z</published>
-    <updated>2020-05-17T06:32:10.307Z</updated>
+    <updated>2020-05-17T07:01:42.873Z</updated>
     
-    <content type="html"><![CDATA[<p>利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是SpringBoot的项目结构<br><img src="%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84.png" alt="SpringBoot项目结构"></p><a id="more"></a><h1 id="启动引导Spring"><a href="#启动引导Spring" class="headerlink" title="启动引导Spring"></a>启动引导Spring</h1><p><img src="ReadingApplication.png" alt="ReadingApplication"><br>ReaddingListApplication在SpringBoot应用程序里有俩个作用：配置和启动引导。</p><p>@SpringBootApplication开启了Spring的组件扫描和SpringBoot的自动配置功能。实际上，@SpringBootApplication将三个有用的注解组合在了一起：</p><ul><li>Spring的@Configuration：标明该类使用Spring基于Java的配置。</li><li>Spring的@ComponentScan：启用组件扫描，这样写的Web控制器类和其他组件才能被自动发现并注册为Spring应用程序上下文里的Bean。</li><li>SpringBoot的@EnableAutoConfiguration：这一行配置开启了SpringBoot自动配置的魔力。</li></ul><h1 id="测试SpringBoot应用程序"><a href="#测试SpringBoot应用程序" class="headerlink" title="测试SpringBoot应用程序"></a>测试SpringBoot应用程序</h1><p><img src="ReadinglistApplicationTests.png" alt="ReadingApplicationTests"><br>Initializr还提供了一个测试类的骨架，可以基于它为你的应用程序编写测试。但ReadingListApplicationTests不止是个用于测试的占位符，他还是一个例子，告诉你如何为SpringBoot应用程序编写测试。</p><p>一个典型的Spring集成测试会使用@ContextConfiguration注解标识如何加载Spring的应用程序上下文。但是，为了充分发挥SpringBoot的魔力，这里使用@SpringApplicationnConfiguration注解.ReadinglistApplicationTests使用@SpringApplicationConfiguration注解从ReadingListApplicationn配置类里加载Spring应用程序上下文。</p><p>ReadingListApplicationTests里还有一个简单的测试方法，即contextLoads()。实际上它就是一个孔方法，但是它足以证明应用程序上下文加载没有问题。</p><h1 id="配置应用程序属性"><a href="#配置应用程序属性" class="headerlink" title="配置应用程序属性"></a>配置应用程序属性</h1><p>Initializr生成的application.properties文件是一个空文件。该文件可以很方便的帮你细粒度的调整SpringBoot的自动配置。你还可以用他来指定应用程序代码所需的配置项。另外，你可以不用告诉SpringBoot为你加载application.properties，只要它存在就会被加载。</p>]]></content>
+    <content type="html"><![CDATA[<p>利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是SpringBoot的项目结构</p><a id="more"></a><p><img src="%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84.png" alt="SpringBoot项目结构"></p><h1 id="启动引导Spring"><a href="#启动引导Spring" class="headerlink" title="启动引导Spring"></a>启动引导Spring</h1><p><img src="ReadinglistApplication.png" alt="ReadingApplication"><br>ReadingListApplication在SpringBoot应用程序里有俩个作用：配置和启动引导。</p><p>@SpringBootApplication开启了Spring的组件扫描和SpringBoot的自动配置功能。实际上，@SpringBootApplication将三个有用的注解组合在了一起：</p><ul><li>Spring的@Configuration：标明该类使用Spring基于Java的配置。</li><li>Spring的@ComponentScan：启用组件扫描，这样写的Web控制器类和其他组件才能被自动发现并注册为Spring应用程序上下文里的Bean。</li><li>SpringBoot的@EnableAutoConfiguration：这一行配置开启了SpringBoot自动配置的魔力。</li></ul><h1 id="测试SpringBoot应用程序"><a href="#测试SpringBoot应用程序" class="headerlink" title="测试SpringBoot应用程序"></a>测试SpringBoot应用程序</h1><p><img src="ReadinglistApplicationTests.png" alt="ReadingApplicationTests"><br>Initializr还提供了一个测试类的骨架，可以基于它为你的应用程序编写测试。但ReadingListApplicationTests不止是个用于测试的占位符，他还是一个例子，告诉你如何为SpringBoot应用程序编写测试。</p><p>一个典型的Spring集成测试会使用@ContextConfiguration注解标识如何加载Spring的应用程序上下文。但是，为了充分发挥SpringBoot的魔力，这里使用@SpringApplicationnConfiguration注解.ReadinglistApplicationTests使用@SpringApplicationConfiguration注解从ReadingListApplicationn配置类里加载Spring应用程序上下文。</p><p>ReadingListApplicationTests里还有一个简单的测试方法，即contextLoads()。实际上它就是一个孔方法，但是它足以证明应用程序上下文加载没有问题。</p><h1 id="配置应用程序属性"><a href="#配置应用程序属性" class="headerlink" title="配置应用程序属性"></a>配置应用程序属性</h1><p>Initializr生成的application.properties文件是一个空文件。该文件可以很方便的帮你细粒度的调整SpringBoot的自动配置。你还可以用他来指定应用程序代码所需的配置项。另外，你可以不用告诉SpringBoot为你加载application.properties，只要它存在就会被加载。</p>]]></content>
     
     <summary type="html">
     
-      &lt;p&gt;利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是SpringBoot的项目结构&lt;br&gt;&lt;img src=&quot;%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84.png&quot; alt=&quot;SpringBoot项目结构&quot;&gt;&lt;/p&gt;
+      &lt;p&gt;利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是SpringBoot的项目结构&lt;/p&gt;
     
     </summary>
     
