@@ -91,8 +91,9 @@
 <meta property="og:image" content="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/ReadinglistApplication.png">
 <meta property="og:image" content="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/ReadinglistApplicationTests.png">
 <meta property="og:image" content="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/%E8%87%AA%E5%8A%A8%E9%85%8D%E7%BD%AE%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84%E6%9D%A1%E4%BB%B6%E5%8C%96%E6%B3%A8%E8%A7%A3.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/POSTT403.png">
 <meta property="article:published_time" content="2020-05-17T05:01:26.000Z">
-<meta property="article:modified_time" content="2020-05-18T08:08:27.985Z">
+<meta property="article:modified_time" content="2020-05-18T11:30:51.897Z">
 <meta property="article:author" content="zwlovefish">
 <meta property="article:tag" content="初始化SpringBoot项目">
 <meta name="twitter:card" content="summary">
@@ -398,6 +399,10 @@
 <li>因为Classpath里有Tomcat(通过Web起步依赖传递引用)，所以会启动一个嵌入式的Tomcat容器，监听8080端口。</li>
 </ol>
 <p>由此可见，SpringBoot自动配置承担起了配置Spring的重任，因此你能专注于编写自己的应用程序。</p>
+<h1 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h1><h2 id="1-Spring-Security跨站防护"><a href="#1-Spring-Security跨站防护" class="headerlink" title="1. Spring Security跨站防护"></a>1. Spring Security跨站防护</h2><p><img src="POSTT403.png" alt="POSTT403"><br>由于第四版中springboot版本较低，没有出现post 403的问题。新版本springBoot中Spring Security的CRSF默认是开启的。所以会出现post 403请求错误的问题。</p>
+<p>解决方法如下：<br>在采用Thymeleaf的情况下：在form表单中，&lt;form method=”POST” th:action=”@{|/readingList|}”&gt;</p>
+<h2 id="2-在启动SpringBoot时，由于Spring-Security会有登录操作"><a href="#2-在启动SpringBoot时，由于Spring-Security会有登录操作" class="headerlink" title="2. 在启动SpringBoot时，由于Spring Security会有登录操作"></a>2. 在启动SpringBoot时，由于Spring Security会有登录操作</h2><p>账号：user</p>
+<p>密码：在idea的控制台中会生成密码</p>
 
       
     </div>
@@ -622,7 +627,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#启动引导Spring"><span class="nav-number">1.</span> <span class="nav-text">启动引导Spring</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#测试SpringBoot应用程序"><span class="nav-number">2.</span> <span class="nav-text">测试SpringBoot应用程序</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置应用程序属性"><span class="nav-number">3.</span> <span class="nav-text">配置应用程序属性</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SpringBoot加载配置"><span class="nav-number">4.</span> <span class="nav-text">SpringBoot加载配置</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#启动引导Spring"><span class="nav-number">1.</span> <span class="nav-text">启动引导Spring</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#测试SpringBoot应用程序"><span class="nav-number">2.</span> <span class="nav-text">测试SpringBoot应用程序</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置应用程序属性"><span class="nav-number">3.</span> <span class="nav-text">配置应用程序属性</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SpringBoot加载配置"><span class="nav-number">4.</span> <span class="nav-text">SpringBoot加载配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#注意"><span class="nav-number">5.</span> <span class="nav-text">注意</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Spring-Security跨站防护"><span class="nav-number">5.1.</span> <span class="nav-text">1. Spring Security跨站防护</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-在启动SpringBoot时，由于Spring-Security会有登录操作"><span class="nav-number">5.2.</span> <span class="nav-text">2. 在启动SpringBoot时，由于Spring Security会有登录操作</span></a></li></ol></li></ol></div>
             
 
           </div>
