@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://zwlovefish.github.io/"/>
-  <updated>2020-05-25T07:31:42.792Z</updated>
+  <updated>2020-07-14T15:57:40.477Z</updated>
   <id>http://zwlovefish.github.io/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>SpringBoot中请求参数String转Date类型</title>
+    <link href="http://zwlovefish.github.io/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/"/>
+    <id>http://zwlovefish.github.io/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/</id>
+    <published>2020-07-14T15:37:34.000Z</published>
+    <updated>2020-07-14T15:57:40.477Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>SpringBoot中请求时，当参数类型为Integer,String，Long等时会自动绑定参数。当Controller中为一个Entity时，会将请求中的参数一一对应到Entity的相应参数。而当Controller中的入参为Date时，请求中的参数为String。这俩个类型会导致映射失败。</p><a id="more"></a><p>一般的请求的url如下图所示：<br><img src="%E8%AF%B7%E6%B1%82API.png" alt="请求API"></p><p>Controller的入参形式如下所示：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DateController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@GetMapping</span>(value = <span class="string">"/getDate"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">getDate</span><span class="params">(@RequestParam(value = <span class="string">"date"</span>)</span> Date date)</span>&#123;</span><br><span class="line">        System.out.println(date);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>如果不做任何操作的话会报错：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Failed to convert value of type <span class="string">'java.lang.String'</span> to required type <span class="string">'java.util.Date'</span></span><br></pre></td></tr></table></figure><h1 id="解决办法是："><a href="#解决办法是：" class="headerlink" title="解决办法是："></a>解决办法是：</h1><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DateConverter</span> <span class="keyword">implements</span> <span class="title">Converter</span>&lt;<span class="title">String</span>, <span class="title">Date</span>&gt; </span>&#123;</span><br><span class="line">    SimpleDateFormat simpleDateFormat = <span class="keyword">new</span> SimpleDateFormat(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>);</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Date <span class="title">convert</span><span class="params">(String s)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(s == <span class="keyword">null</span> || s.equals(<span class="string">""</span>))</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Date transDate = simpleDateFormat.parse(s);</span><br><span class="line">            <span class="keyword">return</span> transDate;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ParseException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p><font color="red">springBoot会自动配置给转换器(其实这里我也不是很懂为什么会自动配置了。。。。。感觉是@Configuration注解的作用)。</font></p><p>另外的方式是继承WebMvcConfigureAdapter。</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebMvcConfig</span> <span class="keyword">extends</span> <span class="title">WebMvcConfigurerAdapter</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addFormatters</span><span class="params">(FormatterRegistry registry)</span> </span>&#123;</span><br><span class="line">        registry.addConverter(<span class="keyword">new</span> DateConverter());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>这样就不需要在DateConverter类上加@Configuration注解了。</p>]]></content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;问题描述&quot;&gt;&lt;a href=&quot;#问题描述&quot; class=&quot;headerlink&quot; title=&quot;问题描述&quot;&gt;&lt;/a&gt;问题描述&lt;/h1&gt;&lt;p&gt;SpringBoot中请求时，当参数类型为Integer,String，Long等时会自动绑定参数。当Controller中为一个Entity时，会将请求中的参数一一对应到Entity的相应参数。而当Controller中的入参为Date时，请求中的参数为String。这俩个类型会导致映射失败。&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="SpringBoot" scheme="http://zwlovefish.github.io/categories/SpringBoot/"/>
+    
+    
+      <category term="SpringBoot请求参数类型转换" scheme="http://zwlovefish.github.io/tags/SpringBoot%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2/"/>
+    
+  </entry>
   
   <entry>
     <title>SpringBoot测试</title>
