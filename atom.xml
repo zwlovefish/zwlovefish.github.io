@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://zwlovefish.github.io/"/>
-  <updated>2020-08-02T18:37:58.000Z</updated>
+  <updated>2020-08-29T18:25:18.102Z</updated>
   <id>http://zwlovefish.github.io/</id>
   
   <author>
@@ -15,6 +15,31 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>随笔</title>
+    <link href="http://zwlovefish.github.io/2020/08/30/%E9%9A%8F%E7%AC%94/"/>
+    <id>http://zwlovefish.github.io/2020/08/30/%E9%9A%8F%E7%AC%94/</id>
+    <published>2020-08-29T18:22:48.000Z</published>
+    <updated>2020-08-29T18:25:18.102Z</updated>
+    
+    <content type="html"><![CDATA[<p>2020.8.11 我会永远记住这一天的。。。。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;2020.8.11 我会永远记住这一天的。。。。&lt;/p&gt;
+
+      
+    
+    </summary>
+    
+    
+    
+      <category term="个人经历" scheme="http://zwlovefish.github.io/tags/%E4%B8%AA%E4%BA%BA%E7%BB%8F%E5%8E%86/"/>
+    
+  </entry>
   
   <entry>
     <title>动态代理</title>
