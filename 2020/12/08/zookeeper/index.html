@@ -81,16 +81,30 @@
 
 
 
-<meta name="description" content="talk is cheap,show me the code">
-<meta property="og:type" content="website">
-<meta property="og:title" content="相知相遇">
-<meta property="og:url" content="http://zwlovefish.github.io/index.html">
+<meta name="description" content="Zookeeper2020-4-28 ——https:&#x2F;&#x2F;www.bilibili.com&#x2F;video&#x2F;BV1M741137qY?p&#x3D;74 https:&#x2F;&#x2F;zookeeper.apache.org&#x2F; 简介&#x2F;快速入门1ZooKeeper is a centralized service for maintaining configuration information, naming, provid">
+<meta property="og:type" content="article">
+<meta property="og:title" content="zookeeper">
+<meta property="og:url" content="http://zwlovefish.github.io/2020/12/08/zookeeper/index.html">
 <meta property="og:site_name" content="相知相遇">
-<meta property="og:description" content="talk is cheap,show me the code">
+<meta property="og:description" content="Zookeeper2020-4-28 ——https:&#x2F;&#x2F;www.bilibili.com&#x2F;video&#x2F;BV1M741137qY?p&#x3D;74 https:&#x2F;&#x2F;zookeeper.apache.org&#x2F; 简介&#x2F;快速入门1ZooKeeper is a centralized service for maintaining configuration information, naming, provid">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-1.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-2.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-3.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-4.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-5.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/%E8%84%91%E8%A3%82.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-8.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-9.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-10.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-11.png">
+<meta property="og:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-12.png">
+<meta property="article:published_time" content="2020-12-08T13:15:56.000Z">
+<meta property="article:modified_time" content="2020-12-08T13:27:34.184Z">
 <meta property="article:author" content="zwlovefish">
 <meta property="article:tag" content="zwlovefish">
 <meta property="article:tag" content="博客">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zwlovefish.github.io/2020/12/08/zookeeper/zookeeper-1.png">
 
 
 
@@ -120,13 +134,13 @@
 
 
 
-  <link rel="canonical" href="http://zwlovefish.github.io/"/>
+  <link rel="canonical" href="http://zwlovefish.github.io/2020/12/08/zookeeper/"/>
 
 
 
 
 
-  <title>相知相遇</title>
+  <title>zookeeper | 相知相遇</title>
   
 
 
@@ -147,8 +161,7 @@
     
   
 
-  <div class="container sidebar-position-left 
-  page-home">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -251,9 +264,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
 
   
 
@@ -283,9 +296,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/12/08/zookeeper/" itemprop="url">zookeeper</a></h1>
+          <h1 class="post-title" itemprop="name headline">zookeeper</h1>
         
 
         <div class="post-meta">
@@ -345,9 +356,7 @@
       
 
       
-        
-          
-            <h1 id="Zookeeper"><a href="#Zookeeper" class="headerlink" title="Zookeeper"></a>Zookeeper</h1><p><em>2020-4-28</em> ——<a href="https://www.bilibili.com/video/BV1M741137qY?p=74" target="_blank" rel="noopener">https://www.bilibili.com/video/BV1M741137qY?p=74</a></p>
+        <h1 id="Zookeeper"><a href="#Zookeeper" class="headerlink" title="Zookeeper"></a>Zookeeper</h1><p><em>2020-4-28</em> ——<a href="https://www.bilibili.com/video/BV1M741137qY?p=74" target="_blank" rel="noopener">https://www.bilibili.com/video/BV1M741137qY?p=74</a></p>
 <p><a href="https://zookeeper.apache.org/" target="_blank" rel="noopener">https://zookeeper.apache.org/</a></p>
 <h2 id="简介-快速入门"><a href="#简介-快速入门" class="headerlink" title="简介/快速入门"></a>简介/快速入门</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services. All of these kinds of services are used in some form or another by distributed applications. Each time they are implemented there is a lot of work that goes into fixing the bugs and race conditions that are inevitable. Because of the difficulty of implementing these kinds of services, applications initially usually skimp on them, which make them brittle in the presence of change and difficult to manage. Even when done correctly, different implementations of these services lead to management complexity when the applications are deployed.</span><br></pre></td></tr></table></figure>
 
@@ -1760,14 +1769,19 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
 <p><img src="zookeeper-12.png" alt="zookeeper-12"></p>
 <p><em>2020-4-28</em> ——<a href="https://www.bilibili.com/video/BV1M741137qY?p=74" target="_blank" rel="noopener">https://www.bilibili.com/video/BV1M741137qY?p=74</a></p>
 
-          
-        
       
     </div>
     
     
     
     <div>
+      
+      <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束<i class="fa fa-paw"></i>感谢您的阅读-------------</div>
+    
+</div>
+
       
     </div>
     
@@ -1779,435 +1793,28 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
       
 
       
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/10/25/springboot%E5%90%AF%E5%8A%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/10/25/springboot%E5%90%AF%E5%8A%A8/" itemprop="url">springboot启动</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-10-25T14:22:54+08:00">
-                2020-10-25
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
-                    <span itemprop="name">SpringBoot</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/10/25/springboot%E5%90%AF%E5%8A%A8/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/10/25/springboot启动/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
       
       
 
       
-        
-          <h1 id="springboot应用的启动代码"><a href="#springboot应用的启动代码" class="headerlink" title="springboot应用的启动代码"></a>springboot应用的启动代码</h1>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/10/25/springboot%E5%90%AF%E5%8A%A8/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/10/25/springboot%E5%90%AF%E5%8A%A8/" rel="next" title="springboot启动">
+                <i class="fa fa-chevron-left"></i> springboot启动
+              </a>
+            
           </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
 
-    
+          <span class="post-nav-divider"></span>
 
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/08/30/test/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/08/30/test/" itemprop="url">test</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
+          <div class="post-nav-prev post-nav-item">
             
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-08-30T05:03:54+08:00">
-                2020-08-30
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/08/30/test/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/08/30/test/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>lalallla</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/08/30/test/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
           </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/08/30/%E9%9A%8F%E7%AC%94/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/08/30/%E9%9A%8F%E7%AC%94/" itemprop="url">随笔</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-08-30T02:22:48+08:00">
-                2020-08-30
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/08/30/%E9%9A%8F%E7%AC%94/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/08/30/随笔/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
         </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
       
 
       
-        
-          
-            <p>2020.8.11 我会永远记住这一天的。。。。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
       
     </footer>
   </div>
@@ -2217,980 +1824,33 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
   </article>
 
 
-    
-      
 
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/08/03/%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/08/03/%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/" itemprop="url">动态代理</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-08-03T01:28:07+08:00">
-                2020-08-03
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/spring%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/" itemprop="url" rel="index">
-                    <span itemprop="name">spring源码阅读</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/08/03/%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/08/03/动态代理/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>从今天开始，要看spring源码了。不是突发奇想，而是很早就有的计划了，不然写代码不知道数据是怎么来的就很烦。。。。。。好了话不多说，最近几天先看一下spring源码的预备知识。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/08/03/%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
+    <div class="post-spread">
       
     </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
   </div>
-  
-  
-  
-  </article>
 
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/" itemprop="url">SpringBoot中请求参数String转Date类型</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-07-14T23:37:34+08:00">
-                2020-07-14
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
-                    <span itemprop="name">SpringBoot</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/07/14/SpringBoot中请求参数String转Date类型/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>SpringBoot中请求时，当参数类型为Integer,String，Long等时会自动绑定参数。当Controller中为一个Entity时，会将请求中的参数一一对应到Entity的相应参数。而当Controller中的入参为Date时，请求中的参数为String。这俩个类型会导致映射失败。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/" itemprop="url">SpringBoot测试</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-25T14:14:41+08:00">
-                2020-05-25
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
-                    <span itemprop="name">SpringBoot</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/05/25/SpringBoot测试/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>在编写应用程序时，明确目标的最佳方法就是写测试，确定应用程序的行为是否符合预期。究竟是在编写业务代码之前还是之后写测试，这并不重要。重要的是，写测试不仅仅是为了验证代码的准确性，还要确认它符合预期。测试也是一道保障，确认应用程序在改进的同时不会破坏已有的东西。</p>
-<p>测试是开发高质量软件的重要一环。没有好的测试，你永远无法保证应用程序能像期望的那样运行。</p>
-<p>单元测试专注于单一组件或组件中的一个方法，此处并不一定要使用Spring。Spring提供了一些优势和技术——松耦合、依赖注入和接口驱动设计。这些都简化了单元测试的编写。但Spring不用直接涉足单元测试。</p>
-<p>集成测试会涉及众多组件，这时就需要Spring帮忙了。实际上，如果Spring在运行时负责拼装那些组件，那么Spring在集成测试里同样应该肩负这一职责。Spring Framework以JUnit类运行器的方式提供了集成测试支持，JUnit类运行器会加载Spring应用程序上下文，把上下文里的Bean注入测试。SpringBoot在Spring的集成测试之上又增加了配置加载器，以SpringBoot的方式加载应用程序上下文，包括了对外置属性的支持和SpringBoot日志。SpringBoot还支持容器内测试Web应用程序，让你能用和生产环境一样的容器启动应用程序。这样一来，测试在验证应用程序行为的时候，会更加接近真实的运行环境。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/05/19/SpringBoot%E8%87%AA%E5%8A%A8%E5%8C%96%E9%85%8D%E7%BD%AE/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/05/19/SpringBoot%E8%87%AA%E5%8A%A8%E5%8C%96%E9%85%8D%E7%BD%AE/" itemprop="url">SpringBoot自动化配置</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-19T17:07:56+08:00">
-                2020-05-19
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
-                    <span itemprop="name">SpringBoot</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/05/19/SpringBoot%E8%87%AA%E5%8A%A8%E5%8C%96%E9%85%8D%E7%BD%AE/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/05/19/SpringBoot自动化配置/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="创建自定义的安全配置"><a href="#创建自定义的安全配置" class="headerlink" title="创建自定义的安全配置"></a>创建自定义的安全配置</h1><p>覆盖自动配置很简单，就当自动配置不存在，直接显式地写一段配置。这段显式配置的形式不限，Spring支持的XML和Groovy形式配置都可以。</p>
-<p>在Spring Security的场景下，这意味着写一个扩展了WebSecurityConfigurerAdapter的配置类。</p>
-<h1 id="通过属性文件外置配置"><a href="#通过属性文件外置配置" class="headerlink" title="通过属性文件外置配置"></a>通过属性文件外置配置</h1><p>SpringBoot的自动配置的Bean提供了300多个用于微调的属性。当你调整设置时，只要在环境变量、Java系统属性，JNDI、命令行参数或者属性文件里进行指定即可。</p>
-<p>SpringBoot能从多种属性源获得属性：</p>
-<ol>
-<li>命令行参数</li>
-<li>java:comp/env</li>
-<li>JVM系统属性</li>
-<li>操作系统环境变量</li>
-<li>随机生成的带random.*前缀的属性(在设置其他属性时，可以引用它们，比如${random.long})</li>
-<li>应用程序以外的application.properties或application.yml文件</li>
-<li>打包在应用程序内的application.properties或application.yml文件</li>
-<li>通过@PropertySource标注的属性源</li>
-<li>默认属性</li>
-</ol>
-<p>这个列表按照优先级排序。任何在高优先级属性源里设置的属性都会覆盖低优先级的相同属性。</p>
-<p>application.properties或application.yml文件能放在一下四个文件夹中：</p>
-<ol>
-<li>外置，在相对于应用程序运行目录的/config子目录里</li>
-<li>外置，在应用程序的运行目录</li>
-<li>内置，在config包中</li>
-<li>内置，在Classpath根目录</li>
-</ol>
-<p>这个列表也是按照优先级的。</p>
-<p><font color="red">注意的是：如果在同一优先级位置同时有application.properties或application.yml文件，application.yml文件里的属性会覆盖application.properties里的文件属性</font></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/" itemprop="url">Sprigboot使用探秘</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-17T13:01:26+08:00">
-                2020-05-17
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
-                    <span itemprop="name">SpringBoot</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/05/17/Sprigboot使用探秘/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>通过SpringBoot的起步依赖和自动配置,可以更加快速、便捷的开发Spring应用程序。起步依赖帮助你专注于应用程序需要的功能类型，而非提供该功能的具体库和版本。与此同时，自动配置把你从样板式的配置中解放了出来。这些配置在SpringBoot的Spring应用程序里非常常见。</p>
-<p>利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是SpringBoot的项目结构</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2020/05/13/SpringBoot%E4%BB%8B%E7%BB%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="zwlovefish">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.jpeg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="相知相遇">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/05/13/SpringBoot%E4%BB%8B%E7%BB%8D/" itemprop="url">SpringBoot介绍</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-13T19:33:54+08:00">
-                2020-05-13
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
-                    <span itemprop="name">SpringBoot</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2020/05/13/SpringBoot%E4%BB%8B%E7%BB%8D/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2020/05/13/SpringBoot介绍/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>Spring Framework已有十余年的历史了，已成为Java应用程序开发框架的事实标准。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/05/13/SpringBoot%E4%BB%8B%E7%BB%8D/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-    <div>
-      
-    </div>
-    
-
-    
-
-    
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-  </section>
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">&lt;i class&#x3D;&quot;fa fa-angle-right&quot;&gt;&lt;&#x2F;i&gt;</a>
-  </nav>
-
+  <!-- 下一行是要添加的代码 start  -->
+  <!-- Link Gitalk 的支持文件  -->
+    <link rel="stylesheet" href="/css/gitalk.css">
+    <script src="/js/src/gitalk.min.js"></script> 
+    <script src="/js/src/md5.min.js"></script>
+    <div id="gitalk-container"></div>     <script type="text/javascript">
+    var gitalk = new Gitalk({
+
+    // gitalk的主要参数
+        clientID: '0295d6dfeb2a8355d908',
+        clientSecret: 'b4b7df99afa11f6cd718b0746b9cb06aa71da955',
+        repo: 'blogcomment',
+        owner: 'zwlovefish',
+        admin: ['zwlovefish'],
+        id: md5(location.pathname),
+
+    });
+    gitalk.render('gitalk-container');
+  </script> 
+  <!-- Gitalk end -->
+  <!-- 到一上行结束 end  -->
 
 
           </div>
@@ -3198,6 +1858,17 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
 
 
           
+
+  
+    <div class="comments" id="comments">
+      <div class="ds-thread" data-thread-key="2020/12/08/zookeeper/"
+           data-title="zookeeper" data-url="http://zwlovefish.github.io/2020/12/08/zookeeper/">
+      </div>
+    </div>
+
+  
+
+
 
 
         </div>
@@ -3219,8 +1890,17 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -3317,6 +1997,22 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Zookeeper"><span class="nav-number">1.</span> <span class="nav-text">Zookeeper</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简介-快速入门"><span class="nav-number">1.1.</span> <span class="nav-text">简介&#x2F;快速入门</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#应用场景"><span class="nav-number">1.1.0.1.</span> <span class="nav-text">应用场景</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Zookeeper的设计目标"><span class="nav-number">1.1.0.2.</span> <span class="nav-text">Zookeeper的设计目标</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数据模型"><span class="nav-number">1.1.0.3.</span> <span class="nav-text">数据模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结点状态stat的属性"><span class="nav-number">1.1.0.4.</span> <span class="nav-text">结点状态stat的属性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#单机安装"><span class="nav-number">1.1.0.5.</span> <span class="nav-text">单机安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#常用shell命令"><span class="nav-number">1.1.0.6.</span> <span class="nav-text">常用shell命令</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#操作结点"><span class="nav-number">1.1.0.6.1.</span> <span class="nav-text">操作结点</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#zookeeper的Acl权限控制"><span class="nav-number">1.1.1.</span> <span class="nav-text">zookeeper的Acl权限控制</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#案例-远程登录"><span class="nav-number">1.1.1.1.</span> <span class="nav-text">案例&#x2F;远程登录</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#acl-超级管理员"><span class="nav-number">1.1.1.2.</span> <span class="nav-text">acl 超级管理员</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#连接到Zookeeper"><span class="nav-number">1.1.1.3.</span> <span class="nav-text">连接到Zookeeper</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#新增节点"><span class="nav-number">1.1.1.3.1.</span> <span class="nav-text">新增节点</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#修改节点"><span class="nav-number">1.1.1.3.2.</span> <span class="nav-text">修改节点</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#watcher检查节点"><span class="nav-number">1.1.1.3.3.</span> <span class="nav-text">watcher检查节点</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#分布式锁"><span class="nav-number">1.1.1.3.4.</span> <span class="nav-text">分布式锁</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#集群搭建"><span class="nav-number">1.1.2.</span> <span class="nav-text">集群搭建</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#一致性协议——zab协议"><span class="nav-number">1.1.2.1.</span> <span class="nav-text">一致性协议——zab协议</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#leader选举"><span class="nav-number">1.1.2.2.</span> <span class="nav-text">leader选举</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#observer角色及其配置"><span class="nav-number">1.1.2.3.</span> <span class="nav-text">observer角色及其配置</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#API连接集群"><span class="nav-number">1.1.2.4.</span> <span class="nav-text">API连接集群</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#curator介绍"><span class="nav-number">1.1.3.</span> <span class="nav-text">curator介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#基础用法"><span class="nav-number">1.1.3.1.</span> <span class="nav-text">基础用法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建"><span class="nav-number">1.1.3.2.</span> <span class="nav-text">创建</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#修改"><span class="nav-number">1.1.3.3.</span> <span class="nav-text">修改</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#删除"><span class="nav-number">1.1.3.4.</span> <span class="nav-text">删除</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读取节点"><span class="nav-number">1.1.3.5.</span> <span class="nav-text">读取节点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读取子节点"><span class="nav-number">1.1.3.6.</span> <span class="nav-text">读取子节点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#watcher"><span class="nav-number">1.1.3.7.</span> <span class="nav-text">watcher</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#事务"><span class="nav-number">1.1.3.8.</span> <span class="nav-text">事务</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分布式锁-1"><span class="nav-number">1.1.3.9.</span> <span class="nav-text">分布式锁</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四字监控命令-配置属性"><span class="nav-number">1.1.4.</span> <span class="nav-text">四字监控命令&#x2F;配置属性</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#conf"><span class="nav-number">1.1.4.1.</span> <span class="nav-text">conf</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#cons"><span class="nav-number">1.1.4.2.</span> <span class="nav-text">cons</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#crst"><span class="nav-number">1.1.4.3.</span> <span class="nav-text">crst</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dump"><span class="nav-number">1.1.4.4.</span> <span class="nav-text">dump</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#envi"><span class="nav-number">1.1.4.5.</span> <span class="nav-text">envi</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ruok"><span class="nav-number">1.1.4.6.</span> <span class="nav-text">ruok</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#stat"><span class="nav-number">1.1.4.7.</span> <span class="nav-text">stat</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#srst"><span class="nav-number">1.1.4.8.</span> <span class="nav-text">srst</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#wchs"><span class="nav-number">1.1.4.9.</span> <span class="nav-text">wchs</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#wchc"><span class="nav-number">1.1.4.10.</span> <span class="nav-text">wchc</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#wchp"><span class="nav-number">1.1.4.11.</span> <span class="nav-text">wchp</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#mntr"><span class="nav-number">1.1.4.12.</span> <span class="nav-text">mntr</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ZooInspector图形化工具"><span class="nav-number">1.1.5.</span> <span class="nav-text">ZooInspector图形化工具</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -3483,6 +2179,10 @@ setData(String path, <span class="keyword">byte</span>[] data, <span class="keyw
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
 
   
 
