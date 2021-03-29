@@ -2,16 +2,23 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>http://zwlovefish.github.io/2021/03/24/spring%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E4%B9%8B%E5%8A%A0%E8%BD%BDbean/</loc>
+    <loc>http://zwlovefish.github.io/2021/03/29/centos7%E5%AE%89%E8%A3%85nginx/</loc>
     
-    <lastmod>2021-03-24T13:35:04.243Z</lastmod>
+    <lastmod>2021-03-29T16:03:36.399Z</lastmod>
     
   </url>
   
   <url>
     <loc>http://zwlovefish.github.io/2021/03/22/centos7%E5%AE%89%E8%A3%85nacos/</loc>
     
-    <lastmod>2021-03-22T15:25:12.937Z</lastmod>
+    <lastmod>2021-03-29T15:57:07.134Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zwlovefish.github.io/2021/03/24/spring%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E4%B9%8B%E5%8A%A0%E8%BD%BDbean/</loc>
+    
+    <lastmod>2021-03-24T13:50:29.589Z</lastmod>
     
   </url>
   
