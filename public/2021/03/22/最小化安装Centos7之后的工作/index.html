@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Centos 7, 开发环境," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="相知相遇" type="application/atom+xml" />
+
+
+
+
+
+
+<meta name="description" content="设置vmware为桥接网络配置静态ip地址1#cd &#x2F;etc&#x2F;sysconfig&#x2F;network-scripts 修改ifcfg-ens33内容，修改BOOTPROTO&#x3D;static ONBOOT&#x3D;yes添加： 123IPADDR&#x3D;192.168.31.10GATEWAY&#x3D;192.168.31.1NETMASK&#x3D;255.255.255.0">
+<meta property="og:type" content="article">
+<meta property="og:title" content="最小化安装Centos7之后的工作">
+<meta property="og:url" content="http://zwlovefish.github.io/2021/03/22/%E6%9C%80%E5%B0%8F%E5%8C%96%E5%AE%89%E8%A3%85Centos7%E4%B9%8B%E5%90%8E%E7%9A%84%E5%B7%A5%E4%BD%9C/index.html">
+<meta property="og:site_name" content="相知相遇">
+<meta property="og:description" content="设置vmware为桥接网络配置静态ip地址1#cd &#x2F;etc&#x2F;sysconfig&#x2F;network-scripts 修改ifcfg-ens33内容，修改BOOTPROTO&#x3D;static ONBOOT&#x3D;yes添加： 123IPADDR&#x3D;192.168.31.10GATEWAY&#x3D;192.168.31.1NETMASK&#x3D;255.255.255.0">
+<meta property="article:published_time" content="2021-03-22T12:39:27.000Z">
+<meta property="article:modified_time" content="2021-03-22T15:20:12.935Z">
+<meta property="article:author" content="zwlovefish">
+<meta property="article:tag" content="Centos 7, 开发环境">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://zwlovefish.github.io/2021/03/22/最小化安装Centos7之后的工作/"/>
+
+
+
+
+
+  <title>最小化安装Centos7之后的工作 | 相知相遇</title>
+  
+
+
+
+
+
+
+
+
+<!-- 页面点击小红心 -->
+  <script type="text/javascript" src="/js/src/clicklove.js"></script>
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">相知相遇</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">来易来，去难去，数十载的人世游</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://zwlovefish.github.io/2021/03/22/%E6%9C%80%E5%B0%8F%E5%8C%96%E5%AE%89%E8%A3%85Centos7%E4%B9%8B%E5%90%8E%E7%9A%84%E5%B7%A5%E4%BD%9C/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="zwlovefish">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="相知相遇">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">最小化安装Centos7之后的工作</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-03-22T20:39:27+08:00">
+                2021-03-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">开发环境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2021/03/22/%E6%9C%80%E5%B0%8F%E5%8C%96%E5%AE%89%E8%A3%85Centos7%E4%B9%8B%E5%90%8E%E7%9A%84%E5%B7%A5%E4%BD%9C/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2021/03/22/最小化安装Centos7之后的工作/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="设置vmware为桥接网络"><a href="#设置vmware为桥接网络" class="headerlink" title="设置vmware为桥接网络"></a>设置vmware为桥接网络</h1><h1 id="配置静态ip地址"><a href="#配置静态ip地址" class="headerlink" title="配置静态ip地址"></a>配置静态ip地址</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"><span class="built_in">cd</span> /etc/sysconfig/network-scripts</span></span><br></pre></td></tr></table></figure>
+<p>修改ifcfg-ens33内容，修改<font color="blue">BOOTPROTO=static ONBOOT=yes</font><br>添加：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">IPADDR=192.168.31.10</span><br><span class="line">GATEWAY=192.168.31.1</span><br><span class="line">NETMASK=255.255.255.0</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<h1 id="重启网络"><a href="#重启网络" class="headerlink" title="重启网络"></a>重启网络</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">systemctl restart network</span></span><br></pre></td></tr></table></figure>
+<h1 id="安装net-tools使用ifconfig"><a href="#安装net-tools使用ifconfig" class="headerlink" title="安装net-tools使用ifconfig"></a>安装net-tools使用ifconfig</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">yum search ifconfig =====&gt;查找软件包</span></span><br><span class="line"><span class="meta">#</span><span class="bash">yum install net-tools.x86_64</span></span><br></pre></td></tr></table></figure>
+<h1 id="安装wget用来更换源"><a href="#安装wget用来更换源" class="headerlink" title="安装wget用来更换源"></a>安装wget用来更换源</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">yun install wget.x86.64</span></span><br></pre></td></tr></table></figure>
+<h1 id="更换为阿里云源"><a href="#更换为阿里云源" class="headerlink" title="更换为阿里云源"></a>更换为阿里云源</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">备份</span><br><span class="line"><span class="meta">#</span><span class="bash">mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup</span></span><br><span class="line">下载新的CentOS-Base.repo到/etc/yum.repos.d中</span><br><span class="line"><span class="meta">#</span><span class="bash">wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-&#123;5,6,7,8&#125;.repo</span></span><br><span class="line">比如centos7</span><br><span class="line"><span class="meta">#</span><span class="bash">wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo</span></span><br><span class="line">生成缓存</span><br><span class="line">yum makecache</span><br></pre></td></tr></table></figure>
+<h1 id="配置java"><a href="#配置java" class="headerlink" title="配置java"></a>配置java</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">解压jdk到/opt下</span><br><span class="line"><span class="meta">#</span><span class="bash">tar zxvf jdk-8u281-linux-x64.tar.gz -C /opt</span></span><br><span class="line">设置java环境变量</span><br><span class="line"><span class="meta">#</span><span class="bash">vi .bashrc</span></span><br><span class="line">export JAVA_HOME=/opt/jdk1.8.0_281</span><br><span class="line">export PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin:$PATH</span><br><span class="line">export CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/jre/lib</span><br></pre></td></tr></table></figure>
+<h1 id="配置maven3-6"><a href="#配置maven3-6" class="headerlink" title="配置maven3.6"></a>配置maven3.6</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">解压到/opt目录下</span><br><span class="line"><span class="meta">#</span><span class="bash">tar -zxvf apache-maven-3.6.3-bin.tar.gz -C /opt</span></span><br><span class="line">配置本地仓库地址</span><br><span class="line">&lt;localRepository&gt;/root/.repos&lt;/localRepository&gt;</span><br><span class="line">配置阿里云镜像</span><br><span class="line">&lt;mirror&gt;</span><br><span class="line">    &lt;id&gt;aliyunmaven&lt;/id&gt;</span><br><span class="line">    &lt;mirrorOf&gt;*&lt;/mirrorOf&gt;</span><br><span class="line">    &lt;name&gt;阿里云公共仓库&lt;/name&gt;</span><br><span class="line">    &lt;url&gt;https://maven.aliyun.com/repository/public&lt;/url&gt;</span><br><span class="line">&lt;/mirror&gt;</span><br><span class="line">设置maven环境变量</span><br><span class="line">export MAVEN_HOME=/opt/apache-maven-3.6.3</span><br><span class="line">export PATH=$MAVEN_HOME/bin:$PATH</span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="built_in">source</span> .bashrc</span></span><br></pre></td></tr></table></figure>
+<h1 id="安装mysql"><a href="#安装mysql" class="headerlink" title="安装mysql"></a>安装mysql</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">解压到/opt/mysql中</span><br><span class="line"><span class="meta">#</span><span class="bash">tar -zxvf mysql-8.0.23-1.el7.x86_64.rpm-bundle.tar -C /opt/mysql</span></span><br><span class="line">查看是否安装有mariadb</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm -qa | grep mariadb</span></span><br><span class="line">卸载mariadb</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm e mariadb-libs-5.5.68-1.el7.x86_64.rpm --nodeps --force</span></span><br><span class="line">安装common</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm -ivh mysql-community-common-8.0.23-1.el7.x86_64.rpm --nodeps --force</span></span><br><span class="line">安装libs</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm -ivh mysql-community-libs-8.0.23-1.el7x86_64.rpm --nodeps --force</span></span><br><span class="line">安装client</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm -ivh mysql-community-client-8.0.23-1.el7.x86_64.rpm --nodeps --force</span></span><br><span class="line">安装server</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm -ivh mysql-community-server-8.0.23-1.el7.x86_64.rpm --nodeps --force</span></span><br><span class="line">查看mysql是否安装完全</span><br><span class="line"><span class="meta">#</span><span class="bash">rpm -qa | grep mysql</span></span><br><span class="line">mysql初始化</span><br><span class="line"><span class="meta">#</span><span class="bash">mysqld --initialize</span></span><br><span class="line"><span class="meta">#</span><span class="bash">chown mysql:mysql /var/lib/mysql -R</span></span><br><span class="line"><span class="meta">#</span><span class="bash">systemctl start mysqld.service</span></span><br><span class="line"><span class="meta">#</span><span class="bash">systemctl <span class="built_in">enable</span> mysqld</span></span><br><span class="line">查看数据库密码</span><br><span class="line"><span class="meta">#</span><span class="bash">cat /var/<span class="built_in">log</span>/mysqld.log | grep password</span></span><br><span class="line">登录数据库</span><br><span class="line"><span class="meta">#</span><span class="bash">mysql -uroot -p (如果克隆的话，需要mysql -uroot -proot登录修改一下密码即可)</span></span><br><span class="line">修改密码</span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> ALTER USER <span class="string">'root'</span>@<span class="string">'localhost'</span> IDENTIFIED WITH mysql_native_password BY <span class="string">'123456'</span>;</span></span><br><span class="line">退出</span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> <span class="built_in">exit</span></span></span><br><span class="line">重新登录</span><br><span class="line"><span class="meta">#</span><span class="bash">mysql -uroot -p123456</span></span><br><span class="line">远程登录</span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> create user <span class="string">'root'</span>@<span class="string">'%'</span> identified with mysql_native_password by <span class="string">'123456'</span>;</span></span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> grant all privileges on *.* to <span class="string">'root'</span>@<span class="string">'%'</span> with grant option;</span></span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> flush privileges;</span></span><br><span class="line">命令修改加密规则，MySql8.0版本和5.0的加密规则不一样，而现在的可视化工具只支持旧的加密方式。</span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> ALTER USER <span class="string">'root'</span>@<span class="string">'localhost'</span> IDENTIFIED BY <span class="string">'root'</span> PASSWORD EXPIRE NEVER;</span></span><br><span class="line">刷新</span><br><span class="line"><span class="meta">mysql&gt;</span><span class="bash"> flush privileges;</span></span><br><span class="line">永久开启3306端口</span><br><span class="line"><span class="meta">#</span><span class="bash">firewall-cmd --zone=public --add-port=3306/tcp --permanent</span></span><br><span class="line"><span class="meta">#</span><span class="bash">firewall-cmd --zone=public --add-port=3306/udp --permanent</span></span><br><span class="line"><span class="meta">#</span><span class="bash">firewall-cmd --reload</span></span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+      
+    </div>
+    
+    
+    
+    <div>
+      
+      <div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束<i class="fa fa-paw"></i>感谢您的阅读-------------</div>
+    
+</div>
+
+      
+    </div>
+    
+
+    
+
+    
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Centos-7-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83/" rel="tag"># Centos 7, 开发环境</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/12/29/RabbitMQ2/" rel="next" title="RabbitMQ入门">
+                <i class="fa fa-chevron-left"></i> RabbitMQ入门
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/03/22/centos7%E5%AE%89%E8%A3%85nacos/" rel="prev" title="centos7安装nacos">
+                centos7安装nacos <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+  <!-- 下一行是要添加的代码 start  -->
+  <!-- Link Gitalk 的支持文件  -->
+    <link rel="stylesheet" href="/css/gitalk.css">
+    <script src="/js/src/gitalk.min.js"></script> 
+    <script src="/js/src/md5.min.js"></script>
+    <div id="gitalk-container"></div>     <script type="text/javascript">
+    var gitalk = new Gitalk({
+
+    // gitalk的主要参数
+        clientID: '0295d6dfeb2a8355d908',
+        clientSecret: 'b4b7df99afa11f6cd718b0746b9cb06aa71da955',
+        repo: 'blogcomment',
+        owner: 'zwlovefish',
+        admin: ['zwlovefish'],
+        id: md5(location.pathname),
+
+    });
+    gitalk.render('gitalk-container');
+  </script> 
+  <!-- Gitalk end -->
+  <!-- 到一上行结束 end  -->
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div class="ds-thread" data-thread-key="2021/03/22/最小化安装Centos7之后的工作/"
+           data-title="最小化安装Centos7之后的工作" data-url="http://zwlovefish.github.io/2021/03/22/%E6%9C%80%E5%B0%8F%E5%8C%96%E5%AE%89%E8%A3%85Centos7%E4%B9%8B%E5%90%8E%E7%9A%84%E5%B7%A5%E4%BD%9C/">
+      </div>
+    </div>
+
+  
+
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpeg"
+                alt="zwlovefish" />
+            
+              <p class="site-author-name" itemprop="name">zwlovefish</p>
+              <p class="site-description motion-element" itemprop="description">talk is cheap,show me the code</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+                <a href="/archives">
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/zwlovefish" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:zjw1149610059@gmail.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/54zhoujianwei" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="http://weibo.com/qixiaquyiba" target="_blank" title="微博">
+                      
+                        <i class="fa fa-fw fa-weibo"></i>微博</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#设置vmware为桥接网络"><span class="nav-number">1.</span> <span class="nav-text">设置vmware为桥接网络</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置静态ip地址"><span class="nav-number">2.</span> <span class="nav-text">配置静态ip地址</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#重启网络"><span class="nav-number">3.</span> <span class="nav-text">重启网络</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装net-tools使用ifconfig"><span class="nav-number">4.</span> <span class="nav-text">安装net-tools使用ifconfig</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装wget用来更换源"><span class="nav-number">5.</span> <span class="nav-text">安装wget用来更换源</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#更换为阿里云源"><span class="nav-number">6.</span> <span class="nav-text">更换为阿里云源</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置java"><span class="nav-number">7.</span> <span class="nav-text">配置java</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置maven3-6"><span class="nav-number">8.</span> <span class="nav-text">配置maven3.6</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装mysql"><span class="nav-number">9.</span> <span class="nav-text">安装mysql</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zwlovefish</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共字</span>
+  <span class="post-meta-divider">|</span>
+  本站总访问量<span id="busuanzi_value_site_pv"></span>次
+  <span class="post-meta-divider">|</span>
+  本站访客数<span id="busuanzi_value_site_uv"></span>人次
+  <span class="post-meta-divider">|</span>
+  本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"your-duoshuo-shortname"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
