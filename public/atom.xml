@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://zwlovefish.github.io/"/>
-  <updated>2021-06-03T13:39:10.981Z</updated>
+  <updated>2021-06-03T14:15:59.735Z</updated>
   <id>http://zwlovefish.github.io/</id>
   
   <author>
@@ -21,13 +21,13 @@
     <link href="http://zwlovefish.github.io/2021/06/03/%E5%AE%B9%E5%99%A8%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/"/>
     <id>http://zwlovefish.github.io/2021/06/03/%E5%AE%B9%E5%99%A8%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0/</id>
     <published>2021-06-03T12:56:25.000Z</published>
-    <updated>2021-06-03T13:39:10.981Z</updated>
+    <updated>2021-06-03T14:15:59.735Z</updated>
     
-    <content type="html"><![CDATA[<h1 id="第二章"><a href="#第二章" class="headerlink" title="第二章"></a>第二章</h1><p>容器的基本实现</p><a id="more"></a><h2 id="配置文件的封装"><a href="#配置文件的封装" class="headerlink" title="配置文件的封装"></a>配置文件的封装</h2><p><img src="%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84%E5%B0%81%E8%A3%85.png" alt="配置文件的封装"></p><h2 id="加载bean"><a href="#加载bean" class="headerlink" title="加载bean"></a>加载bean</h2><p><img src="%E5%8A%A0%E8%BD%BDbean.png" alt="加载bean"></p><h2 id="解析及注册beanDefinitions"><a href="#解析及注册beanDefinitions" class="headerlink" title="解析及注册beanDefinitions"></a>解析及注册beanDefinitions</h2><p><img src="%E8%A7%A3%E6%9E%90%E5%8F%8A%E6%B3%A8%E5%86%8CbeanDefinitions.png" alt="解析及注册beanDefinitions"></p>]]></content>
+    <content type="html"><![CDATA[<p>以XmlBeanFactory为例</p><a id="more"></a><h2 id="配置文件的封装"><a href="#配置文件的封装" class="headerlink" title="配置文件的封装"></a>配置文件的封装</h2><p>首先哈，先将xml文件包装成Resource类，然后通过super(parentBeanFactory)来设置实现了某些接口的类不通过此处注入。<br><img src="%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84%E5%B0%81%E8%A3%85.png" alt="配置文件的封装"></p><h2 id="加载bean"><a href="#加载bean" class="headerlink" title="加载bean"></a>加载bean</h2><p>将上一步的资源类包装成EncodeResource(EncodeResource的作用是以某种编码方式读取Resource的流数据)，在通过EncodeResource获取InputStream，将该资源的InputStream包装成InputSource类处理，接着将资源类以2种方式(DTD和XSD)之一的验证模式获取(应该叫new一个)Document对象<br><img src="%E5%8A%A0%E8%BD%BDbean.png" alt="加载bean"></p><h2 id="解析及注册beanDefinitions"><a href="#解析及注册beanDefinitions" class="headerlink" title="解析及注册beanDefinitions"></a>解析及注册beanDefinitions</h2><p>根据doc来注册bean，这里使用了模板类设计模式<br><img src="%E8%A7%A3%E6%9E%90%E5%8F%8A%E6%B3%A8%E5%86%8CbeanDefinitions.png" alt="解析及注册beanDefinitions"></p>]]></content>
     
     <summary type="html">
     
-      &lt;h1 id=&quot;第二章&quot;&gt;&lt;a href=&quot;#第二章&quot; class=&quot;headerlink&quot; title=&quot;第二章&quot;&gt;&lt;/a&gt;第二章&lt;/h1&gt;&lt;p&gt;容器的基本实现&lt;/p&gt;
+      &lt;p&gt;以XmlBeanFactory为例&lt;/p&gt;
     
     </summary>
     
