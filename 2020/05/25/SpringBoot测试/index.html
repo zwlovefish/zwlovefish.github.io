@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/daxiongmao-16x16-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/daxiongmao-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在编写应用程序时，明确目标的最佳方法就是写测试，确定应用程序的行为是否符合预期。究竟是在编写业务代码之前还是之后写测试，这并不重要。重要的是，写测试不仅仅是为了验证代码的准确性，还要确认它符合预期。测试也是一道保障，确认应用程序在改进的同时不会破坏已有的东西。 测试是开发高质量软件的重要一环。没有好的测试，你永远无法保证应用程序能像期望的那样运行。 单元测试专注于单一组件或组件中的一个方法，此处并">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SpringBoot测试">
+<meta property="og:url" content="http://example.com/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/index.html">
+<meta property="og:site_name" content="zwlovefishの博客">
+<meta property="og:description" content="在编写应用程序时，明确目标的最佳方法就是写测试，确定应用程序的行为是否符合预期。究竟是在编写业务代码之前还是之后写测试，这并不重要。重要的是，写测试不仅仅是为了验证代码的准确性，还要确认它符合预期。测试也是一道保障，确认应用程序在改进的同时不会破坏已有的东西。 测试是开发高质量软件的重要一环。没有好的测试，你永远无法保证应用程序能像期望的那样运行。 单元测试专注于单一组件或组件中的一个方法，此处并">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-05-25T06:14:41.000Z">
+<meta property="article:modified_time" content="2021-10-19T13:31:42.796Z">
+<meta property="article:author" content="zhou jianwei">
+<meta property="article:tag" content="SpringBoot单元测试">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>SpringBoot测试 | zwlovefishの博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">zwlovefishの博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">我们的征途是星辰大海</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/05/25/SpringBoot%E6%B5%8B%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="zhou jianwei">
+      <meta itemprop="description" content="Java小学生">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zwlovefishの博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SpringBoot测试
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-05-25 14:14:41" itemprop="dateCreated datePublished" datetime="2020-05-25T14:14:41+08:00">2020-05-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-10-19 21:31:42" itemprop="dateModified" datetime="2021-10-19T21:31:42+08:00">2021-10-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SpringBoot/" itemprop="url" rel="index"><span itemprop="name">SpringBoot</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在编写应用程序时，明确目标的最佳方法就是写测试，确定应用程序的行为是否符合预期。究竟是在编写业务代码之前还是之后写测试，这并不重要。重要的是，写测试不仅仅是为了验证代码的准确性，还要确认它符合预期。测试也是一道保障，确认应用程序在改进的同时不会破坏已有的东西。</p>
+<p>测试是开发高质量软件的重要一环。没有好的测试，你永远无法保证应用程序能像期望的那样运行。</p>
+<p>单元测试专注于单一组件或组件中的一个方法，此处并不一定要使用Spring。Spring提供了一些优势和技术——松耦合、依赖注入和接口驱动设计。这些都简化了单元测试的编写。但Spring不用直接涉足单元测试。</p>
+<p>集成测试会涉及众多组件，这时就需要Spring帮忙了。实际上，如果Spring在运行时负责拼装那些组件，那么Spring在集成测试里同样应该肩负这一职责。Spring Framework以JUnit类运行器的方式提供了集成测试支持，JUnit类运行器会加载Spring应用程序上下文，把上下文里的Bean注入测试。SpringBoot在Spring的集成测试之上又增加了配置加载器，以SpringBoot的方式加载应用程序上下文，包括了对外置属性的支持和SpringBoot日志。SpringBoot还支持容器内测试Web应用程序，让你能用和生产环境一样的容器启动应用程序。这样一来，测试在验证应用程序行为的时候，会更加接近真实的运行环境。</p>
+<span id="more"></span>
+
+<p>在编写单元测试的时候，Spring通常不需要介入。Spring鼓励松耦合、接口驱动的设计，这些都能让你很轻松地编写单元测试。但是在写单元测试时并不需要用到Spring。集成测试需要用到Spring。如果生产应用程序使用Spring来配置并组装组件，那么测试就需要 用它来配置并组装那些组件。</p>
+<p>Spring的SpringJUnit4ClassRunner可以在基于JUnit的应用程序测试里加载Spring应用程序上下文。在测试SpringBoot应用程序时，SpringBoot除了拥有Spring的集成测试支持，还开启了自动配置和Web服务器，并提供了不少实用的测试辅助工具。</p>
+<p>Spring Framework的核心工作是将所有组件编织在一起，构成一个应用程序。整个过程就是读取配置说明(可以是XML、基于Java的配置、基于Groovy的配置或其他类型的配置)，在应用程序上下文里初始化Bean，将Bean注入依赖它们的其他Bean中。</p>
+<p>对Spring应用程序进行集成测试时，让Spring遵照生产环境来组装测试目标Bean是非常重要的一点。Spring自1.1.1版就向集成测试提供了极佳的支持。自Spring2.5开始，集成测试支持的形式就编程了SpringJUnit4ClassRunner。这是一个JUnit类运行器，会为JUnit测试加载Spring应用程序上下文，并未测试类自动织入所需的Bean。</p>
+<h1 id="测试Web应用程序"><a href="#测试Web应用程序" class="headerlink" title="测试Web应用程序"></a>测试Web应用程序</h1><p>SpringMVC有一个优点：它的编程模型是围绕POJO展开的，在POJO上添加注解，声明如何处理Web请求。这种编程模型不仅简单，还让你能像对待应用程序中的其他组件一样对待这些控制器。你还可以针对这些控制器编写测试，就像POJO一样。</p>
+<p>要恰当的测试一个Web应用程序，你需要投入一些实际的HTTP请求，确认它能正确地处理那些请求。幸运的是，SpringBoot开发者有俩个可选的方案能实现这类测试</p>
+<ol>
+<li>Spring Mock MVC：能在一个近似真实的模拟Servlet容器里测试控制器，而不用实际启动应用服务器。</li>
+<li>Web集成测试：在嵌入式Servlet容器(比如Tomcat或Jetty)里启动应用程序，在真正的应用服务器里执行测试。</li>
+</ol>
+<p><font color="red">这俩种方法各有利弊。启动一个应用服务器会比模拟Servlet容器要慢一点，但毫无疑问基于服务器的测试会更接近真实环境，更接近部署到生产环境运行的情况。</font></p>
+<h2 id="模拟Spring-MVC"><a href="#模拟Spring-MVC" class="headerlink" title="模拟Spring MVC"></a>模拟Spring MVC</h2><p>Spring的Mock MVC框架模拟了Spring MVC的很多功能。它几乎和运行在Servlet容器里的应用程序一样，尽管实际情况并非如此。要在测试里设置Mock MVC，可以使用MockMvcBuilders，该类提供了俩个静态方法。</p>
+<ul>
+<li>standaloneSetup()：构建一个Mock MVC，提供一个或多个手工创建并配置的控制器。</li>
+<li>webAppContextSetup()：使用Spring应用程序上下文来构建Mock MVC，该上下文里可以包含一个或多个配置好的控制器。</li>
+</ul>
+<p>俩者的主要区别在于，standaloneSetup()希望你手工初始化并注入你要测试的控制器，而webAppContextSetup()则基于一个WebApplicationContext的实例，通常由Spring加载。前者同单元测试更加接近，你可能只想让它专注于单一控制器的测试，而后者让Spring加载控制器及其依赖，以便进行完整的集成测试。</p>
+<h2 id="测试运行中的应用程序"><a href="#测试运行中的应用程序" class="headerlink" title="测试运行中的应用程序"></a>测试运行中的应用程序</h2><p>在测试类上添加@WebIntegrationTest注解，可以声明你不仅希望SpringBoot为测试创建应用程序上下文，还要启动一个嵌入式的Servlet容器。一旦应用程序运行在嵌入式容器里，你就可以发起真实的HTTP请求，断言结果了。</p>
+<h2 id="用随机端口启动服务器"><a href="#用随机端口启动服务器" class="headerlink" title="用随机端口启动服务器"></a>用随机端口启动服务器</h2><p>让SpringBoot在随机选择的端口上启动服务器很方便。</p>
+<p>一种方法是将server.port属性设置为0，让SpringBoot选择一个随机的可用端口。@WebIntegrationTest的value属性接受一个String数组，数组中的每项都是键值对，形如name&#x3D;value，用来设置测试中使用的属性。要设置server.port，你可以这样做：@WebIntegrationTest(value&#x3D;{“server.port&#x3D;0”}),另外，因为只要设置一个属性，所以还能有更简单的形式@WebIntegrationTest(“server.port&#x3D;0”)</p>
+<p>通过value属性来设置属性通常还算方便。但@WebIntegrationTest还提供了一个randomPort属性 ，更明确地表示让服务器在随机端口上启动。你可以将randomPort设置为true，启用随机端口。@WebIntegrationTest(randomPort &#x3D; true)</p>
+<p>既然我呢在随机端口上启动了服务器，就需要在发起Web请求时确保使用正确的端口。此时getForObject()方法在URL里硬编码了8080端口.如果端口是随机选择的,那在构造请求时又该怎么确定正确的端口呢?</p>
+<p>首先,我们需要以实例变量的形式注入选中的端口。为了方便，SpringBoot将local.server.port的值设置为了选中的端口。我们只需要使用Spring的@Value注解将其注入即可：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Value(&quot;$&#123;local.server.port&#125;&quot;)</span></span><br><span class="line"><span class="keyword">private</span> <span class="type">int</span> port;</span><br></pre></td></tr></table></figure>
+<p>有了端口之后，只需对getForObject()稍作修改，使用这个port就好了：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rest.getForObject(<span class="string">&quot;http://localhost:&#123;port&#125;/bogusPage&quot;</span>,String.class,port);<span class="comment">//这里的rest是RestTemplate rest = new RestTemplate</span></span><br></pre></td></tr></table></figure>
+<p>这里我们在URL里把硬编码的8080改为{port}占位符。在getForObject()调用里把port属性作为最后一个参数传入，就能确保该占位符被替换为注入的port的值了。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SpringBoot%E5%8D%95%E5%85%83%E6%B5%8B%E8%AF%95/" rel="tag"># SpringBoot单元测试</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/05/19/SpringBoot%E8%87%AA%E5%8A%A8%E5%8C%96%E9%85%8D%E7%BD%AE/" rel="prev" title="SpringBoot自动化配置">
+      <i class="fa fa-chevron-left"></i> SpringBoot自动化配置
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/07/14/SpringBoot%E4%B8%AD%E8%AF%B7%E6%B1%82%E5%8F%82%E6%95%B0String%E8%BD%ACDate%E7%B1%BB%E5%9E%8B/" rel="next" title="SpringBoot中请求参数String转Date类型">
+      SpringBoot中请求参数String转Date类型 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95Web%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">测试Web应用程序</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E6%8B%9FSpring-MVC"><span class="nav-number">1.1.</span> <span class="nav-text">模拟Spring MVC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E8%BF%90%E8%A1%8C%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F"><span class="nav-number">1.2.</span> <span class="nav-text">测试运行中的应用程序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8%E9%9A%8F%E6%9C%BA%E7%AB%AF%E5%8F%A3%E5%90%AF%E5%8A%A8%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">1.3.</span> <span class="nav-text">用随机端口启动服务器</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="zhou jianwei"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">zhou jianwei</p>
+  <div class="site-description" itemprop="description">Java小学生</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">24</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/zwlovefish" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;zwlovefish" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1149610059@qq.com" title="E-Mail → mailto:1149610059@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhou jianwei</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

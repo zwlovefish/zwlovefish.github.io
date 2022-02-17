@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/daxiongmao-16x16-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/daxiongmao-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="通过SpringBoot的起步依赖和自动配置,可以更加快速、便捷的开发Spring应用程序。起步依赖帮助你专注于应用程序需要的功能类型，而非提供该功能的具体库和版本。与此同时，自动配置把你从样板式的配置中解放了出来。这些配置在SpringBoot的Spring应用程序里非常常见。 利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是Spring">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sprigboot使用探秘">
+<meta property="og:url" content="http://example.com/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/index.html">
+<meta property="og:site_name" content="zwlovefishの博客">
+<meta property="og:description" content="通过SpringBoot的起步依赖和自动配置,可以更加快速、便捷的开发Spring应用程序。起步依赖帮助你专注于应用程序需要的功能类型，而非提供该功能的具体库和版本。与此同时，自动配置把你从样板式的配置中解放了出来。这些配置在SpringBoot的Spring应用程序里非常常见。 利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是Spring">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/.com//%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://example.com/.com//ReadinglistApplication.png">
+<meta property="og:image" content="http://example.com/.com//ReadinglistApplicationTests.png">
+<meta property="og:image" content="http://example.com/.com//%E8%87%AA%E5%8A%A8%E9%85%8D%E7%BD%AE%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84%E6%9D%A1%E4%BB%B6%E5%8C%96%E6%B3%A8%E8%A7%A3.png">
+<meta property="og:image" content="http://example.com/.com//POSTT403.png">
+<meta property="article:published_time" content="2020-05-17T05:01:26.000Z">
+<meta property="article:modified_time" content="2021-10-19T13:31:42.793Z">
+<meta property="article:author" content="zhou jianwei">
+<meta property="article:tag" content="初始化SpringBoot项目">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/.com//%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84.png">
+
+<link rel="canonical" href="http://example.com/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Sprigboot使用探秘 | zwlovefishの博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">zwlovefishの博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">我们的征途是星辰大海</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/05/17/Sprigboot%E4%BD%BF%E7%94%A8%E6%8E%A2%E7%A7%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="zhou jianwei">
+      <meta itemprop="description" content="Java小学生">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zwlovefishの博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Sprigboot使用探秘
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-05-17 13:01:26" itemprop="dateCreated datePublished" datetime="2020-05-17T13:01:26+08:00">2020-05-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-10-19 21:31:42" itemprop="dateModified" datetime="2021-10-19T21:31:42+08:00">2021-10-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SpringBoot/" itemprop="url" rel="index"><span itemprop="name">SpringBoot</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>通过SpringBoot的起步依赖和自动配置,可以更加快速、便捷的开发Spring应用程序。起步依赖帮助你专注于应用程序需要的功能类型，而非提供该功能的具体库和版本。与此同时，自动配置把你从样板式的配置中解放了出来。这些配置在SpringBoot的Spring应用程序里非常常见。</p>
+<p>利用Spring Initializr创建的项目，其结构遵循传统maven或Gradle项目的布局。下面是SpringBoot的项目结构</p>
+<span id="more"></span>
+<p><img src="/.com//%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84.png" alt="SpringBoot项目结构"></p>
+<h1 id="启动引导Spring"><a href="#启动引导Spring" class="headerlink" title="启动引导Spring"></a>启动引导Spring</h1><p><img src="/.com//ReadinglistApplication.png" alt="ReadingApplication"><br>ReadingListApplication在SpringBoot应用程序里有俩个作用：配置和启动引导。</p>
+<p>@SpringBootApplication开启了Spring的组件扫描和SpringBoot的自动配置功能。实际上，@SpringBootApplication将三个有用的注解组合在了一起：</p>
+<ul>
+<li>Spring的@Configuration：标明该类使用Spring基于Java的配置。</li>
+<li>Spring的@ComponentScan：启用组件扫描，这样写的Web控制器类和其他组件才能被自动发现并注册为Spring应用程序上下文里的Bean。</li>
+<li>SpringBoot的@EnableAutoConfiguration：这一行配置开启了SpringBoot自动配置的魔力。</li>
+</ul>
+<h1 id="测试SpringBoot应用程序"><a href="#测试SpringBoot应用程序" class="headerlink" title="测试SpringBoot应用程序"></a>测试SpringBoot应用程序</h1><p><img src="/.com//ReadinglistApplicationTests.png" alt="ReadingApplicationTests"><br>Initializr还提供了一个测试类的骨架，可以基于它为你的应用程序编写测试。但ReadingListApplicationTests不止是个用于测试的占位符，他还是一个例子，告诉你如何为SpringBoot应用程序编写测试。</p>
+<p>一个典型的Spring集成测试会使用@ContextConfiguration注解标识如何加载Spring的应用程序上下文。但是，为了充分发挥SpringBoot的魔力，这里使用@SpringApplicationnConfiguration注解.ReadinglistApplicationTests使用@SpringApplicationConfiguration注解从ReadingListApplicationn配置类里加载Spring应用程序上下文。</p>
+<p>ReadingListApplicationTests里还有一个简单的测试方法，即contextLoads()。实际上它就是一个孔方法，但是它足以证明应用程序上下文加载没有问题。</p>
+<h1 id="配置应用程序属性"><a href="#配置应用程序属性" class="headerlink" title="配置应用程序属性"></a>配置应用程序属性</h1><p>Initializr生成的application.properties文件是一个空文件。该文件可以很方便的帮你细粒度的调整SpringBoot的自动配置。你还可以用他来指定应用程序代码所需的配置项。另外，你可以不用告诉SpringBoot为你加载application.properties，只要它存在就会被加载。</p>
+<h1 id="SpringBoot加载配置"><a href="#SpringBoot加载配置" class="headerlink" title="SpringBoot加载配置"></a>SpringBoot加载配置</h1><p>在向应用程序加入SpringBoot时，有个名为spring-boot-autoconfigure的JAR文件，其中包含了很多配置类。每个配置类都在应用程序需的Classpath里。这些配置类里有用于Thymeleaf的配置，有用于Spring Data JPA的配置，有用于Spring MVC的配置，还有很多其他东西的配置。</p>
+<p>SpringBoot定义了很多更有趣的条件，并把它们运用到了配置类上，<font color="red">这些配置类构成了SpringBoot的自动配置。SpringBoot运用条件化配置的方法是，定义多个特殊的条件化注解，并将他们用到配置类上。</font><br><img src="/.com//%E8%87%AA%E5%8A%A8%E9%85%8D%E7%BD%AE%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84%E6%9D%A1%E4%BB%B6%E5%8C%96%E6%B3%A8%E8%A7%A3.png" alt="自动配置中使用的条件化注解"></p>
+<p>以H2为例，SpringBoot自动配置会做出以下配置决策：</p>
+<ol>
+<li>因为Classpath里有H2，所以会常见一个嵌入式的H2数据库Bean，它的类型是javax.sql.DataSource，JPA实现(Hibernate)需要它来访问数据库。</li>
+<li>因为Classpath里有Hibernate(Spring Data JPA传递引用的)的实体管理器，所以自动配置会配置与Hibernate相关的Bean，包括Spring的LocalContainerEntityManagerFactoryBean和JpaVendorAdapter。</li>
+<li>因为Classpath里有Spring Data JPA，所以它会自动配置为根据仓库的接口创建仓库实现。</li>
+<li>因为Classpath里有Thymeleaf，所以Thymeleaf会配置为Spring MVC的视图，包括一个Thymeleaf的模板解析器、模板引擎及视图解析器。视图解析器会解析相对于Classpath根目录的&#x2F;templates目录里的模板。</li>
+<li>因为Classpath里有Spring MVC(归功于Web起步依赖)，所以会配置Spring的DispatcherServlet并请用Spring MVC。</li>
+<li>因为这是一个Spring MVC Web应用程序，所以会注册一个资源处理器，把相对于Classpath根目录的&#x2F;static目录里的静态内容提供出来(这个资源处理器还能处理&#x2F;public、&#x2F;resources和&#x2F;META-INF&#x2F;resources的静态内容)。</li>
+<li>因为Classpath里有Tomcat(通过Web起步依赖传递引用)，所以会启动一个嵌入式的Tomcat容器，监听8080端口。</li>
+</ol>
+<p>由此可见，SpringBoot自动配置承担起了配置Spring的重任，因此你能专注于编写自己的应用程序。</p>
+<h1 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h1><h2 id="1-Spring-Security跨站防护"><a href="#1-Spring-Security跨站防护" class="headerlink" title="1. Spring Security跨站防护"></a>1. Spring Security跨站防护</h2><p><img src="/.com//POSTT403.png" alt="POSTT403"><br>由于第四版中springboot版本较低，没有出现post 403的问题。新版本springBoot中Spring Security的CRSF默认是开启的。所以会出现post 403请求错误的问题。</p>
+<p>解决方法如下：<br>在采用Thymeleaf的情况下：在form表单中，&lt;form method&#x3D;”POST” th:action&#x3D;”@{|&#x2F;readingList|}”&gt;</p>
+<h2 id="2-在启动SpringBoot时，由于Spring-Security会有登录操作"><a href="#2-在启动SpringBoot时，由于Spring-Security会有登录操作" class="headerlink" title="2. 在启动SpringBoot时，由于Spring Security会有登录操作"></a>2. 在启动SpringBoot时，由于Spring Security会有登录操作</h2><p>账号：user</p>
+<p>密码：在idea的控制台中会生成密码</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E5%88%9D%E5%A7%8B%E5%8C%96SpringBoot%E9%A1%B9%E7%9B%AE/" rel="tag"># 初始化SpringBoot项目</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/05/13/SpringBoot%E4%BB%8B%E7%BB%8D/" rel="prev" title="SpringBoot介绍">
+      <i class="fa fa-chevron-left"></i> SpringBoot介绍
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/05/19/SpringBoot%E8%87%AA%E5%8A%A8%E5%8C%96%E9%85%8D%E7%BD%AE/" rel="next" title="SpringBoot自动化配置">
+      SpringBoot自动化配置 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8%E5%BC%95%E5%AF%BCSpring"><span class="nav-number">1.</span> <span class="nav-text">启动引导Spring</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95SpringBoot%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F"><span class="nav-number">2.</span> <span class="nav-text">测试SpringBoot应用程序</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%B1%9E%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">配置应用程序属性</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SpringBoot%E5%8A%A0%E8%BD%BD%E9%85%8D%E7%BD%AE"><span class="nav-number">4.</span> <span class="nav-text">SpringBoot加载配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F"><span class="nav-number">5.</span> <span class="nav-text">注意</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Spring-Security%E8%B7%A8%E7%AB%99%E9%98%B2%E6%8A%A4"><span class="nav-number">5.1.</span> <span class="nav-text">1. Spring Security跨站防护</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%9C%A8%E5%90%AF%E5%8A%A8SpringBoot%E6%97%B6%EF%BC%8C%E7%94%B1%E4%BA%8ESpring-Security%E4%BC%9A%E6%9C%89%E7%99%BB%E5%BD%95%E6%93%8D%E4%BD%9C"><span class="nav-number">5.2.</span> <span class="nav-text">2. 在启动SpringBoot时，由于Spring Security会有登录操作</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="zhou jianwei"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">zhou jianwei</p>
+  <div class="site-description" itemprop="description">Java小学生</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">24</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/zwlovefish" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;zwlovefish" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1149610059@qq.com" title="E-Mail → mailto:1149610059@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhou jianwei</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
