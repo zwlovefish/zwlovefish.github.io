@@ -103,6 +103,5 @@ theme: next
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repo: 
-    github: git@github.com:zwlovefish/zwlovefish.github.io.git
-    branch: master
+  repo: git@github.com:zwlovefish/zwlovefish.github.io.git
+  branch: master
