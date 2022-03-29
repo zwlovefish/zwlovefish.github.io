@@ -25,6 +25,10 @@ categories: 随笔
 ```yml
 post_asset_folder: true
 ```
+在博客目录下执行
+```shell
+npm install https://github.com/CodeFalling/hexo-asset-image --save
+```
 配置完成后，每当利用hexo new post_name时，会在_posts目录下生成一个post_name.md文件和一个post_name的目录，将图片放在该目录下可以通过
 ```markdown
 ![image.name](pic.jpg)
