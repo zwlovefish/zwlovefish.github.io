@@ -1,8 +1,8 @@
 ---
 title: mysql集群搭建
 date: 2021-04-26 21:53:54
-tags: Centos 7, 开发环境
-categories: 开发环境
+tags: Centos 7,开发环境
+categories: 开发环境,MySQL
 ---
 准备好mysql8，centos7以及三台主机 211、212、213。以211为主，212，213为从主机
 
