@@ -27,7 +27,9 @@ categories: 工作
     ]
 }
 ```
+
 <!-- more -->
+
 通过jpa存储到数据库一般情况需要三张表，A主表，B是A的子表，c是B的子表，但是根据我们自己的业务，A和B可以唯一确定C，为了减少子表，落库的数据结构是
 {A, B, C1}, {A,B,C2}。写编写整集群重启时，需要从DB恢复数据，因此需要将{A, B, C1},{A, B, C2}恢复成rest的结构，首先就需要根据A来分组，在根据B来分组，最后得到C数组，
 从数据库读取数据用的是eclipselink，eclipselink在实例化C数组时用的是IndirectList，IndirectList继承的是Vector，Vector在1.8被增强了，增加了spliterator()等函数，这样就可以使用流操作了。但是坑爹的IndirectList，它tmd将Vector中的函数都重写了一遍，因此低版本的Vector不能使用流操作。。。。。
