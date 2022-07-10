@@ -537,3 +537,355 @@ MyISAM中的索引相当于全部都是二级索引，数据和索引是分开�
 - information_schema: 存储了MySQL服务器维护的所有其他数据库的信息，比如哪些表、哪些视图、哪些触发器、哪些列、哪些索引等，这些信息不是真实的用户数据，而是一些描述信息，有时候也称之为元数据。
 - performance_schema: 存储了服务器运行过程中的一些状态信息，算是对MySQL服务器的一个性能监控。它包含的信息有统计最近执行了哪些语句，在执行过程中的每个阶段都花费了多长时间，内存的使用情况等。
 - sys: 这个数据库主要是通过视图的形式把information_schema和performance_schema结合起来，让开发人员更方便的了解MySQL服务器的性能信息。
+
+# 存放页面的大池子
+表空间是一个抽象的概念：对于系统表空间来说，对应着文件系统中一个或多个实际文件；对于每个独立表空间来说，对应着一个名为"表名.ibd"的实际文件。
+
+|类型名称|16进制|描述|
+|:--:|:--:|:--:|
+|FIL_PAGE_TYPE_ALLOCATED|0x0000|最新分配，还未使用|
+|FIL_PAGE_UNDO_LOG|0x0002|undo日志页|
+|FIL_PAGE_INODE|0x0003|存储段的信息|
+|FIL_PAGE_IBUF_FREE_LIST|0x0004|Change Buffer空闲列表|
+|FIL_PAGE_IBUF_BITMAP|0x0005|Change Buffer的一些属性|
+|FIL_PAGE_TYPE_SYS|0x0006|存储一些系统数据|
+|FIL_PAGE_TYPE_TRX_SYS|0x0007|事务系统数据|
+|FIL_PAGE_TYPE_FSP_HDR|0x0008|表空间头部信息|
+|FIL_PAGE_TYPE_XDES|0x0009|存储区的一些属性|
+|FIL_PAGE_TYPE_BLOB|0x000a|溢出页|
+|FIL_PAGE_INDEX|0x45BF|索引页，也就是我们所说的数据页|
+
+所有页的类型都会包含2个部分：
+1. file header：记录页面的一些通用信息
+2. file trailer： 校验页是否完整，保证页面从内存刷新到磁盘后内容是相同的
+
+在file header中需要注意的是：
+- 表空间中的每一个页都对应着一个页号，也就是FIL_PAGE_OFFSET，可以通过这个页号在表空间快速定位到指定的页面，这个页号由4字节组成，也就是32位，，所以一个表空间最多可以拥有2^32个页，每个页的默认大小为16KB，即一个表空间最多支持64TB的数据。
+- 某些类型的页可以组成链表，链表中相邻的两个页面的页号可以不连续，即它们可以不按照在表空间中的物理位置相邻存储，而是根据FIL_PAGE_PREV和FIL_PAGE_NEXT来存储上一个页和下一个页的页号。需要注意的是一般是INDEX类型的页面使用这两个字段，其他的页面类型不使用这两个字段。
+- 每个页的类型由FIL_PAGE_TYPE表示。具体的在上表中。
+
+## 独立表空间结构
+### 区的概念
+对于16KB的页来说，连续的64个页就是一个区，也就是说一个区默认占用1MB空间大小。无论是系统表空间还是独立表空间，都可以看成是由若干个连续的区组成的，每256个区被划分成一组，如下图所示：
+![每个组的页面类型](每个组的页面类型.png)
+从图中可以看出：
+1. 第一个组的最开始的3个页面的类型都是固定的。
+    - FSP_HDR: 这个类型的页面用来登记整个表空间的一些整体属性以及本组所有的区的属性，需要注意的是，整个表空间只有一个FSP_HDR类型的页面
+    - IBUF_BITMAP: 这个类型的页面用来存储关于Change Buffer的一些信息。
+    - INODE: 这个类型的页面存储了许多成为INODE Entry的数据结构。
+2. 其余各组最开始的2个页面的类型是固定的
+    - XDES: 全称是extent descriptor，用来登记本组256个区的属性。FSP_HDR与XDES类型的页面相似，只是FSP_HDR还会额外存储一些表空间的属性
+    - IBUF_BITMAP: 这个类型的页面用来存储关于Change buffer的一些信息。
+
+总的来说每个区由64个页组成、每256个区组成一组、每个组的开始的几个页面的类型是固定的。
+
+### 段的概念
+不引入区的概念，只使用页的概念对存储引擎的运行并没有影响，但是如果考虑到这样一个场景：向表中插入一条记录，实际上就是向该表的聚簇索引和二级索引代表的B+树的节点插入数据。而B+树每一层中的页都会形成一个双向链表，如果以页为单位来分配存储空间，双向链表相邻的两个页之间的物理位置可能离的非常远，对于传统机械硬盘来说，需要重新定位磁头的位置，也就是会产生随机I/O，这样影响磁盘的性能。所以应该尽量让页面链表相邻的页的物理位置页相邻，这样在扫描叶子节点中大量记录的时才可以使用顺序I/O。(不连续也可以，无非就是性能差一点)
+
+因此引入了区的概念，一个区就是物理位置上连续的64个页，且区里的页号也都是连续的，在表中的数据量很大时，为某个索引分配空间的时候就不再按照页为单位进行分配，而是直接按照区来分配。虽然会造成存储空间的浪费，但是性能提升了很多。
+
+如果执行查询时扫描叶子结点的记录而不区分叶子节点和非叶子节点，统统把节点代表的页申请到区中，扫描效果还是会打折扣，因此对B+树的叶子节点和非叶子节点进行了区别的对待即叶子节点和非叶子节点都有各自独立的区。存放叶子节点的区就算是一个段，而存放非叶子节点的区是另外一个段。一个索引会产生2个段：一个叶子节点段和一个非叶子节点段
+
+在考虑这样一个场景：默认情况下一个只存放了几条记录的小表也需要申请2MB(段以区为单位申请，每个区默认大小为1MB，一个叶子节点段，一个飞叶子节点段)？这个问题在于一个区被整个分配给某个段(区中的所有页面都是为了存储同一个段的数据，即使段的数据填不满区中所有的页面，剩下的页面也不能挪作他用)。引入一个碎片区的概念：在一个碎片区中，并不是所有的页都是为了存储同一个段的数据而存在的，碎片区中的页可以用作不同的目的，比如有些页属于段A，有些页属于段B，有些页不属于任何段。碎片区直属于表空间，因此为某个段分配存储空间的策略如下：
+1. 刚开始向表中插入数据时，段是从某个碎片区以单个页面为单位来分配存储空间
+2. 当某个段已经占用了32个碎片区页面之后，就会以完整的区为单位来分配存储空间(原先占用的碎片区页面并不会被废止到新申请的完整的区中)
+
+段不仅能定义某些区的集合，更精确的来说：应该是某些零散的页面以及一些完整区的集合。除了索引的叶子节点和非叶子节点的段之外，InnoDB中还有为存储一些特殊的数据而定义的段，比如回滚段
+
+## 区的分类
+表空间是由若干个区组成，这些区大致分为4中类型：
+- 空闲的区： 现在还没有用到这个区中的任何页面
+- 有剩余空闲页面的碎片区： 表示碎片区中还有可被分配的空闲页面
+- 没有升级空闲页面的碎片区： 表示碎片区中的所有页面都被分配使用，没有空闲页面
+- 附属于某个段的区： 每一个索引都可以分为叶子页面和非叶子节点段。除此之外，InnoDB还会定义一些特殊用途的段。当这些段中的数据量很大时，将使用区作为基本的分配单位，这些区中的页面完全用于存储该段中的数据
+
+|状态名|含义|
+|:--:|:--:|
+|FREE|空闲的区|
+|FREE_FRAG|有剩余空闲页面的碎片区|
+|FULL_FRAG|没有剩余空闲页面的碎片区|
+|FSEG|附属于某个段的区|
+值得一提的是FREE、FREE_FRAG、FULL_FRAG直属于表空间，而FSET附属于某个段。有一个数据结构XDES Entry(Extent Descriptor Entry)可以方便的管理这些区，每个区都对应着一个XDES Entry的结构这个结构记录了对应的区的一些属性。
+![XDES_Entry结构示意图](XDES_Entry结构示意图.png)
+
+- Segment ID: 每个段都有一个独立的编号，用ID表示。Segment ID字段表示的就是该区所在的段，前提是该区已经被分配给某个段了，不然没有意义
+- ListNode： 这个部分可以将若干个XDES Entry结构串成一个链表。
+- State: 这个字段表明区的状态。可选值为FREE、FREE_FRAG、FULL_FRAG以及FSEG。
+- Page State Bitmap: 这个部分共16字节，也就是128位。一个区默认有64个页，因此每2个比特位对应着区中的一个页。这2位中的第一位表示该页是否空闲，第二位暂时没用到。
+
+### XDES Entry链表
+向某个段中插入数据申请新页面的过程：当段中的数据较少时，首先会查看表空间中是否有FREE_FRAG的区，如果找到了，那么就从该区中去一个零散的页面插进去；否则到表空间中申请一个FREE的区，把该区的状态变为FREE_FRAG，然后从该新申请的区中去一个零散页把数据插入进去；之后在不同的段使用零散页的时候都从该区中取，知道该区中没有空闲页面，然后该区的状态就变为了FULL_FRAG的状态。
+
+那么怎么知道哪些区是FREE，哪些区是FREE_FRAG的呢？这就用到了XDES Entry中ListNode结构了：
+1. 通过List Node把状态为FREE的区对应的XDES Entry结构连成一个链表，这个链表成为FREE链表
+2. 通过List Node把状态为FREE_FRAG的区对应的XDES Entry结构连成一个链表，这个链表称为FREE_FRAG链表
+3. 通过List Node把状态为FULL_FRAG的区对应的XDES Entry结构连成一个链表，这个链表称为FULL_FRAG链表
+
+这样每当想查找一个FREE_FRAG状态的区时，就直接把FREE_FRAG链表的头结点拿出来，从这个节点队对应的区中取一些零散页来插入数据。当这个节点对应的区中没有零散页时，就修改它的State字段的值，并将其从FREE_FRAG链表移入FULL_FRAG链表；同理当FREE_FRAG链表中一个节点都没有，那么就直接从FREE链表中去一个节点移动到FREE_FRAG链表，并修改其State字段的值，然后从这个节点对应的区中取一些零散页。当段中的数据占满32个零散页后，就申请完整的区来插入数据。
+
+怎么知道哪些区属于哪个段呢？为每个段中的XDES Entry结构建立3个链表：
+1. FREE链表：同一个段中，所有页面都是空闲页面的区对应的XDES Entry结构会被加入到这个链表中，这与上面的FREE链表不是一回事。
+2. NOT_FULL链表：同一个段中，仍有空闲页面的区对应的XDES Entry结构会被加入到这个链表中。
+3. FULL链表：同一个段中，已经没有空闲页面的区对应的XDES Entry结构会被加入到这个链表中。
+
+每个索引都有2个段，每个段都会维护上述3个链表。
+
+### 举例
+```shell
+CREATE TABLE t (
+    c1 INT NOT NULL,AUTO_INCREMENT,
+    c2 VARCHAR(100),
+    c3 VARCHAR(100),
+    PRIMARY KEY(c1),
+    KEY idx_c2(c2)
+)ENGINE=InnoDB
+```
+表中共有2个索引，一个聚簇索引和一个二级索引idx_c2。所以这个表共有4个段，每个段都会维护FREE链表、NOT_FULL链表以及FULL链表，总共是12个链表。以及直属于表空间的FREE链表、FREE_FRAG链表以及FULL_FRAG链表，整个独立表空间共需要维护15个链表。
+
+### 链表基节点
+如何找到上述的这些链表或者说怎么找到某个链表的头结点呢？有一个名为List Base Node(链表基节点)的结构。这个结构包含了链表的头结点和尾结点的指针以及这个链表中包含了多少个节点的信息，如图所示：
+![ListBaseNode](ListBaseNode.png)
+- List length: 该链表有多少个节点
+- First Node Page Number和First Node Offset：该链表的头结点在表空间的位置
+- Last Node Page Number和Last Node Offset: 该链表的尾结点在表空间的位置
+
+一般将某个链表对应的List Base Node放到表空间的固定位置，这样就可以很容易的定位某个链表了
+
+### 链表小结
+表空间是由若干个区组成的，每个区都对应着一个XDES Entry结构。只属于表空间的区对应的XDES Entry结构可以分成FREE、FREE_FRAG和FULL_FRAG链表。每个段可以拥有若干个区，每个段中的区对应的XDES Entry可以构成FREE、NOT_NULL和FULL这三个链表。每个链表都对应着一个List Base Node结构，这个结构中记录了链表头结点、尾结点以及该链表包含结点的个数的信息。
+
+## 段的结构
+段不对应表空间某个连续的物理存储空间，而是一个逻辑上的概念，由若干个零散的页面以及一些完整的区组成。像每个区对应着一个XDES Entry结构一样，每个段对应着一个INODE Entry结构。
+![INODE_Entry](INODE_Entry.png)
+INODE Entry结构中各个部分的含义如下：
+- Segment ID: 这个INODE Entry结构对应的段的编号
+- NOT_FULL_N_USED: 在NOT_FULL链表中已经使用了多少个页面
+- 3个List Base Node： 分别为段的FREE、NOT_FULL、FULL链表定义的List Base Node，这样当想查找某个段的某个链表的头结点和尾结点时，可以直接到这个部分找到对应链表的List Base Node。
+- Magic Number: 标记INODE Entry是否已经被初始化。如果这个数字的值为97937874，表明该INODE Entry已经被初始化。这个数字没有特殊的含义，仅仅是人为规定
+- Fragment Array Entry: 段是一些零散页面和一些完整的区组成，每个Fragment Array Entry对应着一个零散的页面，表示一个零散页面的页号
+
+## 各类型页面详细情况
+### FSP_HDR类型
+这是第一个组的第一个页面，页号为0，也是表空间的第一个页面，它存储了表空间的一些整体属性以及第一个组内256个区对应的XDES Entry结构，如下图所示：
+![FSP_HDR类型的页结构示意图](FSP_HDR类型的页结构示意图.png)
+
+|名称|中文名|占用空间大小|简单描述|
+|:--:|:--:|:--:|:--:|
+|File Header|文件头部|38|页的一些通用信息|
+|File Space Header|表空间头部|112|表空间的一些整体属性信息|
+|XDES Entry|区描述信息|10240|存储本组256个区对应的属性信息|
+|Empty Space|尚未使用空间|5986|用于页结构的填充，没啥实际意义|
+|File Trailer|文件尾部|8|校验页是否完整|
+
+#### File Space Header
+![File_Space_Header](File_Space_Header.png)
+|名称|占用空间大小|描述|
+|:--:|:--:|:--:|
+|Space ID|4|表空间ID|
+|Not Used|4|未被使用，可以忽略|
+|Size|4|当前表空间拥有的页面数|
+|FREE Limit|4|尚未被初始化的最小页号，大于或等于这个页号的区对应的XDES Entry结构都没有被加入到FREE链表|
+|Space Flags|4|表空间的一些占用存储空间比较小的属性|
+|FRAG_N_USED|4|FREE_FRAG链表中已使用的页面数量|
+|List Base Node for FREE List|16|FREE链表的基节点|
+|List Base Node for FREE_FRAG List|16|FREE_FRAG链表的基节点|
+|List Base Node for FULL_FRAG List|16|FULL_FRAG链表的基节点|
+|Next Unused Segment ID|8|当前表空间中下一个未使用的Segment ID|
+|List Base Node for SEG_INODES_FULL List|16|SEG_INODES_FULL链表的基节点|
+|List Base Node for SEG_INODES_FREE_List|16|SEG_INODES_FREE链表的基节点|
+
+- List Base Node for FREE List、List Base Node for FREE_FRAG List、List Base Node for FULL_FRAG List: 直属于表空间的FULL、FREE_FRAG、FULL_FRAG链表的基节点，这三个链表的基节点在File Space Header部分中的位置是固定的。
+- FRAG_N_USED: 表明在FREE_FRAG链表中已经使用的页面数量
+- FREE Limit: 表空间对应着具体的磁盘文件，表空间在最初创建时会有一个默认的大小。且磁盘文件是一个自增长文件，当文件不够用时，会自动增加文件大小。这会带来2个问题：
+    1. 最初创建一个表空间时，可以指定一个非常大的磁盘文件，接着对表空间完成一个初始化的操作：包括为表空间中的区建立对应的XDES Entry结构；为各个段建立对应的INODE Entry结构；建立各个链表等。但是对于非常大的磁盘文件来说，有很多存储空间是空闲的。因此：可以把所有的空闲区加入到FREE链表、也可以把一部分空闲区加入到FREE链表，等FREE链表不够用时，再把空闲的区对应的XDES Entry加入到FREE链表。
+    2. 对于自增加的存储文件来说，可能在发生一次自增长时分配的磁盘空间非常大。同样的：可以把新分配的所有的空闲区加入到FREE链表、也可以把一部分空闲区加入到FREE链表，等FREE链表不够用时，再把空闲的区对应的XDES Entry加入到FREE链表(InnoDB采用的是这种)
+- Next Unused Segment ID: 表中的每个索引对应着2个段，每个段都有一个唯一的ID。当为某个表新建一个索引时，需要新建2个段，该字段表明当前表空间最大的段的ID的下一个ID。
+- Space Flags: 表空间中与布尔类型相关的属性，或者只需要几个比特就能搞定的属性。
+|标识名称|占用的空间大小(比特)|描述|
+|:--:|:--:|:--:|
+|POST_ANTELOPE|1|表示文件格式是否在ANTELOPE格式之后|
+|ZIP_SSIZE|4|表示压缩页面大小|
+|ATOMIC_BLOBS|1|表示是否自动把占用存储空间非常多的字段放到溢出页中|
+|PAGE_SSIZE|4|页面大小|
+|DATA_DIR|1|表示表空间是否是从数据目录中获取的|
+|SHARED|1|是否为共享表空间|
+|TEMPORARY|1|是否为临时表空间|
+|ENCRYPTION|1|表空间是否加密|
+|UNUSED|18|没有使用到的比特位|
+- List Base Node for SET_INODES_FULL list、List Base Node for SET_INODES_FREE List: 每个段对应的INODE Entry结构会存放一个类型为INODE的页中。如果表空间中的段非常多时，则会有多个INODE Entry结构，此时一个页可能放不下，就需要多个INODE类型的页面，这些INODE类型的页面可以构成下面两种链表：
+    1. SET_INODE_FULL链表: 在该链表中，INODE类型的页面都已经被INODE Entry结构填满，没有空闲空间存放额外的INODE Entry
+    2. SET_INODE_FREE链表: 在该链表中，INODE类型的页面仍然可以存放INODE Entry结构
+
+#### XDES Entry
+没什么好说的了，一个XDES Entry结构的大小为40字节。XDES Entry 0对应着extent 0，XDES Entry 1对应着extent 1...因为每个区对应着的XDES Entry结构的地址都是固定的，因此可以很轻松的访问extent0对应着的XDEX Entry结构(页面偏移量为150字节)，extent 1对应的XDES Entry就是(150 + 40*1)，一次类推...
+
+### XDES类型
+与FSP_HDR类型的页面相比，除了没有File Space Header部分之外(也就是没有一些表空间的整体属性)，区域的部分都是一样的。XDES类型的页结构如下图所示：
+![XDES类型的页结构示意图](XDES类型的页结构示意图.png)
+
+### IBUF_BITMAP类型
+这个类型的页中记录了一些Change Buffer的东西。向表中插入一条记录，其本质就是向每个索引对应的B+树中插入记录。该记录首先被插入到聚簇索引页面，然后在插入到每个二级索引页面。这些页面在表空间中随机分布，将会产生大量的随机I/O，严重影响性能，对于UPDATE和DELETE来说，也会带来许多随机I/O。所以需要引入Change Buffer结构来优化。在修改非唯一二级索引页面时，如果该页面尚未被加载到内存中(磁盘上)，那么该修改将先被暂时缓存到Change Buffer中，之后服务器空闲或者其他什么原因导致对应的页面从磁盘加载到内存时，再将修改合并到对应的页面。<font color="red">如果此时服务器宕机怎么办？</font>在很早的版本时，只会缓存INSERT操作对二级索引页面所做的修改，所以Change Buffer也叫Inser Buffer。
+
+### INODE类型
+每个索引定义了2个段，而且某些特殊功能由特殊的段，为了方便管理这些段，引入了一个INODE Entry的结构，这个结构记录了这个段的相关属性，INODE类型的页就是为了存储INODE Entry结构。INODE类型的页结构如下图所示：
+![INODE类型的页结构示意图](INODE类型的页结构示意图.png)
+|名称|中文名|占用空间大小(字节)|简单描述|
+|:--:|:--:|:--:|:--:|
+|File Header|文件头部|38|页的一些通用信息|
+|List Node for INODE Page List|通用链表节点|12|存储上一个INODE页面和下一个INODE页面的指针|
+|INODE Entry|段描述信息|16320|具体的INODE Entry结构|
+|Empty Space|尚未使用空间|6|用于页结构的填充，没有啥实际意义|
+|File Trailer|文件尾部|8|校验页是否完整|
+- INODE Entry: 该结构的组成：主要包括对应的段内零散页面的地址以及附属于该段的FREE、NOT_FULL和FULL链表的基节点。每个INODE Entry占用192字节，一个页面可以存储85个这样的节点。
+- List Node for INODE Page List: 如果一个表空间存在的段超过85个，那么一个INODE类型的页面不足以存储所有的段对应的INODE Entry结构，所以就需要额外的INODE类型的页来存储这些结构。为了方便管理这些INODE类型的页面，将其串连成2个不同的链表
+    1. SET_INODE_FULL链表：在该链表中，INODE类型的页面中已经没有空间来存储INODE Entry结构了
+    2. SET_INODE_FREE链表: 在该链表中，INODE类型的页面还有空闲来存储INODE Entry结构
+
+这2个链表的基节点存储在FSP_HDR类型页面中的File Space Header中，就是说这2个链表的基节点是固定的，从而可以轻松访问这两个链表。以后每当新创建一个段(例如创建索引)时，都会创建一个与之对应的INODE Entry，存储INODE Entry的过程如下：
+1. 查看SET_INODE_FREE链表是否为空，如果不为空，从该链表中获取一个节点(相当于获取一个由空闲空间的INODE类型页面)，然后把该INODE Entry结构存放到该页面中，当该页面无空闲空间时，就把该页面放到SET_INODE_FULL链表中。
+2. 如果SET_INODE_FREE为空，则需要从表空间的FREE_FRAG链表中申请一个页面，并将该页面类型改为INODE类型，把该页面放到SET_INODE_FREE链表中，与此同时把INODE Entry存放到该页面中。
+
+### Segment Header结构
+一个索引产生2个段，分别是叶子节点段和非叶子节点段，每个段都会对应着一个INODE Entry结构。如何知道某个段对应那个INODE Entry呢？数据页(即INDEX类型的页)的Page Header部分中有2个属性：PAGE_BTR_SET_LEAF(B+树叶子结点段的头部信息，仅在B+树的根页中定义)和PAGE_BTR_SET_TOP(B+树非叶子节点段的头部信息，仅在B+树的根页中定义)，这2个属性都占用10个字节，它们其实对应一个Setment Header的结构，如下图所示：
+![Segment_Header结构](Segment_Header结构.png)
+|名称|占用空间大小(字节)|描述|
+|:--:|:--:|:--:|
+|Space ID of the INODE Entry|4|INODE Entry结构所在的表空间ID|
+|Page Number of the INODE Entry|4|INODE Entry结构所在的页面页号|
+|Byte Offset of the INODE Entry|2|INODE Entry结构在该页面中的偏移量|
+PAGE_BTR_SET_LEAF记录着叶子节点段对应的INODE Entry结构的地址是哪个表空间哪个页面的哪个偏移量；PAGE_BTR_SET_TOP记录着非叶子节点段对应的INODE Entry结构的地址是哪个表空间中哪个页面的哪个偏移量。这样，索引和对应的段的关系就建立起来了。需要注意的是:<font color="red">因为一个索引对应两个段，所以只需要在索引的根页面中记录着两个结构即可</font>
+
+## 系统表空间
+系统表空间与独立表空间基本类似，由于整个MySQL进程只有一个系统表空间，系统表空间中需要记录一些与整个系统相关的信息，所以会比独立表空间多出一些用来记录这些信息的页面，它的表空间ID为0。
+### 系统表空间的整体结构
+![系统表空间结构](系统表空间结构.png)
+系统表空间与独立表空间最大的不同之处就是在表空间开头有许多记录整个系统属性的页面，从上图可以看到系统表空间和独立表空间的前3个页面(页号分别为0,1,2，类型分别是FSP_HDR、IBUF_BITMAP、INODE)的类型是一致的，但是页号为3-7的页面时系统表空间特有的：
+|页号|页面类型|英文描述|描述|
+|:-:|:-:|:-:|:-:|
+|3|SYS|Insert Buffer Header|存储Change Buffer的头部信息|
+|4|INDEX|Insert Buffer Root|存储Change Buffer的根页面|
+|5|TRX_SYS|Transction System|事务系统的相关信息|
+|6|SYS|First Rollback Segment|第一个回滚段的信息|
+|7|SYS|Data Dictionary Header|数据字典头部信息|
+
+除了这几个记录系统属性的页面之外，系统表空间的extent1和extent2这两个区的128个页面成为Doublewrite Buffer(双写缓冲区)。
+
+### InnoDB数据字典
+我们使用INSERT语句向表中插入的那些记录称为用户数据，MySQL只是作为一个软件来为我们保管这些数据，提供方便的增删改查接口而已。但是每当像一个表中插入一条记录时，MySQL先要校验插入语句所随影的表是否存在，以及插入的列和表中的列是否符合。如果语法没有问题，还需要知道该表的聚簇索引和所有二级索引对应的根页面是哪个表空间的哪个页面，然后把记录插入对应索引的B+树中。所以MySQL除了保存插入的用户记录外，还需要保存许多额外的信息，如下：
+- 某个表属于哪个表空间，表里面有多少列
+- 表对应的每一个列的类型是什么
+- 该表有多少个索引，每个索引对应哪几个字段，该索引对应的跟页面在哪个表空间的哪个页面
+- 该表有哪些外键，外键对应哪个表的哪些列
+- 某个表空间对应的文件系统上的文件路径是什么
+
+上述信息并不是使用Insert语句插入的用户数据，实际上是为了更好的管理用户数据而不得已引入的一些额外的数据，这些数据也被称为元数据。InnoDB存储引擎特意定义了一系列的内部系统表来记录这些元数据：
+
+|表明|描述|
+|:--:|:--:|
+|SYS_TABLES|整个InnoDB存储引擎中所有表的信息|
+|SYS_COLUMNS|整个InnoDB存储引擎中所有列的信息|
+|SYS_INDEXES|整个InnoDB存储引擎中所有索引的信息|
+|SYS_FIELDS|整个InnoDB存储引擎中所有索引对应的列的信息|
+|SYS_FOREIGN|整个InnoDB存储引擎中所有外键的信息|
+|SYS_FOREIGN_COLS|整个InnoDB存储引擎中所有外键对应的列的信息|
+|SYS_TABLESPACES|整个InnoDB存储引擎中所有表空间信息|
+|SYS_DATAFILES|整个InnoDB存储引擎中所有表空间对应的文件系统的文件路径信息|
+|SYS_VIRTUAL|整个InnoDB存储引擎中所有虚拟生成的列的信息|
+
+这些系统表也被称为数据字典，他们都是以B+树的形式保存在系统表空间的某些页面中，其中SYS_TABLES、SYS_COLUMNS、SYS_INDEXES、SYS_FIELDS这四个表尤为重要，成为基本系统表
+
+#### SYS_TABLES表
+|列名|描述|
+|:--:|:--:|
+|NAME|表的名称|
+|ID|在InnoDB存储引擎中，每个表都有的一个唯一的ID|
+|N_COLS|该表拥有列的个数|
+|TYPE|表的类型，记录了一些文件格式、行格式、压缩等信息|
+|MIX_ID|已过时，忽略|
+|MIX_LEN|表的一些额外属性|
+|CLUSTER_ID|未使用，忽略|
+|SPACE|该表所属表空间的ID|
+
+SYS_TABLES表有两个索引，以NAME列为主键的聚簇索引，以ID列建立的二级索引
+
+#### SYS_COLUMNS表
+|列名|描述|
+|:--:|:--:|
+|TABLE_ID|该列所属表对应的ID|
+|POS|该列在表中是第几列|
+|NAME|该列的名称|
+|MTYPE|主数据类型(main data type)，就是那堆INT、CHAR、VARCHAR、FLOAT、DOUBLE之类的东西|
+|PRTYPE|精确数据类型(prccise type)，就是修改主数据类型的那堆东西，比如是否允许NULL值，是否允许负数|
+|LEN|该列最多占用存储空间的字节数|
+|PREC|该列的精度，默认值都是0|
+
+SYS_COLUMNS表只有一个聚簇索引，即以(TABLE_ID, POS)列为主键的聚簇索引
+
+#### SYS_INDEXES表
+|列名|描述|
+|:--:|:--:|
+|TABLE_ID|该索引所属表对应的ID|
+|ID|在InnoDB存储引擎中，每个索引都有的一个唯一的ID|
+|NAME|该索引的名称|
+|N_FIELDS|该索引包含的列的个数|
+|TYPE|该索引的类型，比如聚簇索引，唯一二级索引，更改缓冲区的索引，全文索引，普通的二级索引|
+|SPACE|该索引根页面所在的表空间ID|
+|PAGE_NO|该索引根页面所在的页面号|
+|MERGE_THRESHOLD|如果页面中的记录被删除到某个比例，就尝试把该页面和相邻页面合并，这个值就是这个比例|
+
+SYS_INDEX表只有一个聚簇索引，即以(TABLE_ID, ID)列为主键的聚簇索引
+
+#### SYS_FIELDS表
+|列名|描述|
+|:--:|:--:|
+|INDEX_ID|该列所属索引的ID|
+|POS|该列在索引列中是第几列|
+|COL_NAME|该列的名称|
+
+SYS_FIELDS表只有一个聚簇索引，即以(INDEX_ID, POS)列为主键的聚簇索引
+
+#### Data Dictionary Header页面
+只要有了上述四个基本系统表，也就意味着可以获取其他系统表以及用户定义的表的所有元数据。比如：SYS_TABLESSPACES系统表中存储了哪些表空间以及表空间对应的属性，就可以执行一下操作：
+1. 根据表名到SYS_TABLES表中定位到具体的记录，从而获取到SYS_TABLESPACES表的TABLE_ID
+2. 使用获取到的TABLE_ID到SYS_COLUMNS表中就可以获取到属于该表的所有列的信息
+3. 使用获取到的TABLE_ID还可以到SYS_INDEXES表中获取所有的索引的信息。索引的信息中包括对应的INDEX_ID，还记录着该索引对应的B+树根页面是哪个表空间的哪个页面
+4. 使用获取到的INDEX_ID就可以到SYS_FIELDS表中获取所有索引列的信息
+
+上述四个系统基本表是表中之表，这四个表的元数据硬编码到代码中，然后用一个固定的页面来记录这四个表的聚簇索引和鸡儿索引对应的B+树的位置。就是页面就是页号为7的页面，类型为SYS，记录了Data Dictionary Header的信息，除了这4个表的5个索引的根页面信息外，这个页号为7的页面还记录了整个InnoDB存储引擎的一些全局属性。如下图所示：
+![页号为7的页的组成部分及其描述](页号为7的页的组成部分及其描述.png)
+
+|名称|占用空间大小(字节)|简单概述|
+|:--:|:--:|:--:|
+|File Header(文件头部)|38|页的一些通用信息|
+|Data Dictionary Header(数据字典头部)|52|记录一些基本系统表的根页面位置以及InnoDB存储引擎的一些全局信息|
+|Unused|4|未使用|
+|Segment Header(段头部)|10|记录本页面所在段随你应的INODE Entry位置信息|
+|Empty Space(尚未使用的空间)|16272|用于页结构的填充，没啥实际意义|
+|File Trailer(文件尾部)|8|校验页是否完整|
+
+这个页面中也有Segment Header部分，这意味着这些有关数据字典的信息当成一个段来分配存储空间，称之为数据字典段。由于目前需要记录的数据字典信息非常少(可以看到Data Dictionary Header部分仅占用了52字节)，所以该段只有一个碎片页，也就是页号为7的这个页。下面详细说一下Data Dictionary Header部分的各个字段：
+- Max Row ID: 如果不显示的为表定义主键，且表中也没有不允许存储NULL值的UNIQUE键，那么InnoDB存储引擎会默认生成一个名为row_id的列作为主键，因为其是主键，索引每条记录的row_id列的值不允许重复，原则上只要一个表中的row_id列不重复就可以了，也就是说表a和表b拥有一样的row_id列也没啥关系，不过MySQL只提供了Max Row ID字段，无论哪个拥有row_id列的表插入一条记录时，该记录的row_id列的值就是Max Row ID对应的值，然后再把Max Row ID对应的值加1，该字段是全局共享的。
+- Max Table ID: 在InnoDB存储引擎中，所有的表都对应一个唯一的ID，每次新建一个表时，就会把该字段的值加1，然后将其作为该表的ID
+- Max Index ID: 在InnoDB存储引擎中，所有的索引都对应一个唯一的ID，每次新建一个索引时，就会把该段的值加1，然后将其作为该索引的ID
+- Max Space ID: 在InnoDB存储引擎中，所有的表空间都对应一个唯一的ID，每次新建一个表空间时，就会把该字段的值加1，然后将其作为该表空间的ID
+- Mix ID Low(Unused): 这个字段没啥用
+- Root of SYS_TABLES clust index: 表示SYS_TABLES表聚簇索引的根页面的页号
+- Root of SYS_TABLES_IDS sec index: 表示SYS_TABLES表为ID列建立的二级索引的根页面的页号
+- Root of SYS_COLUMNS clust index: 表示SYS_COLUMNS表聚簇索引的根页面的页号
+- Root of SYS_INDEXES clust index: 表示SYS_INDEXES表局促讴吟的根页面的页号
+- Root of SYS_FIELDS clust index: 表示SYS_FIELDS表聚簇索引的根页面的页号
+
+#### information_schema系统数据库
+用户不能直接访问InnoDB的这些内部系统表，除非直接去解析系统表空间对应的文件系统上的文件。不过MySQL提供了查看这些表的内容的方法，所以在系统数据库information_schema中提供了一些以INNODB_SYS开头的表：
+- INNODB_SYS_DATAFILES
+- INNODB_SYS_VIRTUAL
+- INNODB_SYS_INDEXES
+- INNODB_SYS_TABLES
+- INNODB_SYS_FIELDS
+- INNODB_SYS_TABLESPACES
+- INNODB_SYS_FOREIGN_COLS
+- INNODB_SYS_COLUMNS
+- INNODB_SYS_FOREIGN
+- INNODB_SYS_TABLESTATS
+
+在information_schema数据库中，这些以INNODB_SYS开头的表并不是真正的内部系统表(内部系统表就是说以SYS开头的那些表)，而是在存储引擎启动时读取这些以SYS开头的系统表，然后填充到这些以INNODB_SYS开头的表中，以INNODB_SYS开头的表和以SYS开头的表中的字段并不完全一样，供用户查看已经足矣。
