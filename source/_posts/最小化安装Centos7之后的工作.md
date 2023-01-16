@@ -76,7 +76,7 @@ export PATH=$MAVEN_HOME/bin:$PATH
 查看是否安装有mariadb
 #rpm -qa | grep mariadb
 卸载mariadb
-#rpm e mariadb-libs-5.5.68-1.el7.x86_64.rpm --nodeps --force
+#rpm -e mariadb-libs-5.5.68-1.el7.x86_64.rpm --nodeps --force
 安装common
 #rpm -ivh mysql-community-common-8.0.23-1.el7.x86_64.rpm --nodeps --force
 安装libs
