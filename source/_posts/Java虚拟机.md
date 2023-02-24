@@ -93,6 +93,54 @@ HotSpot虚拟机对象头Mark Word
 - 分代收集算法(新生代用复制，老年代用标记——清除或者标记——整理)
 
 ## 垃圾收集器
+## final,finally,finalize的区别
+- final修饰变量，方法和类
+- final修饰变量时，该变量不可变。修饰引用变量时，引用不用变，但是引用变量里面的值可以变
+- final修饰方法时，该方法不可被覆盖
+- final修饰类时，该类不可被继承
+
+### finally
+finally是在异常处理时提供finally块来执行任何清除操作的，如果try语句中发生了catch块中的异常，则跳转到catch中进行异常处理，而finally中的内容则是无论异常是否发生都要执行的。如果finally中有return，则会先执行finally再执行return，如果此时try中也有return，则try中的return不会执行，但是，如果只有try中有return也是先执行finally中的语句再执行return；
+### finalize
+要宣告一个对象有没有真正死亡，至少要经历俩次标记过程：如果对象在进行可达性分析后发现没有与GC Roots相连，那么他将第一次标记，并进行一次筛选，筛选的条件是对象有没有覆盖finalize方法或者改finalize方法有没有被调用过，如果没有覆盖或者已经执行过finalize之后，虚拟机将这俩种情况均视为没有必要执行。如果一个对象被判定为有必要执行finalize()方法，那么这个对象将会放置在一个F-Queue的队列中，并在稍后由一个虚拟机自动建立，低优先级的Finalizer线程去执行它，不保证等待它运行结束。这里引用深入理解java虚拟机上面的一段代码
+```java
+public class FinalizeEscapeGC{
+	public static FinalizeEscapeGC SAVE_HOOK = null;
+	public void isAlive(){
+		System.out.println("yes, i am still alive :");
+	}
+	@Override
+	protected void finalize () throws Throwable{
+		super.finalize();
+		System.out.println("finalize method executed");
+		FinalizeEscapeGC.SAVE_HOOK = this;
+	}
+	public static void main(String[] args){
+		SAVE_HOOK = new FinalizeEscapeGC();
+		//对象第一次成功解救自己
+		SAVE_HOOK = null；
+		System.gc();
+		//因为finalize方法优先级很低，所以暂停0.5秒等待它
+		Thread.sleep(500);
+		if(SAVE_HOOK != null){
+			SAVE_HOOK.isAlive();
+		}else{
+			System.out.println("no, i am dead");
+		}
+		//下面这段代码和上面的完全相同，但是这次自救却失败了。
+		SAVE_HOOK = null;
+		System.gc();
+		Thread.sleep(500);
+		if(SAVE_HOOK != null){
+			SAVE_HOOK.isAlive();
+		}else{
+			System.out.println("no, i am dead");
+		}
+	}
+}
+```
+
+这里一次成功逃脱一次逃脱失败的原因是任何一个对象的finalize()方法都只会被系统自动调用一次。
 ### Serial收集器
 一个单线程的收集器
 
