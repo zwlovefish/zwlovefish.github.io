@@ -108,3 +108,266 @@ __第二条规则:__ 第二条规则也比较容易理解，也就是说无论�
 __第三条规则:__ 如果一个线程先去写一个变量，然后一个线程去进行读取，那么写入操作肯定会先行发生于读操作。
 
 __第四条规则:__ happens-before原则具备传递性。
+
+## 线程的六种状态和切换
+![线程的六种状态](线程的六种状态.PNG)
+
+|状态名称|说明|
+|:--:|:--:|
+|NEW|初始状态，线程被构建，但是还没有调用start方法|
+|RUNNABLE|运行状态，JAVA线程将打操作系统中的就绪和运行两种状态笼统地称作"运行中"|
+|BLOCKED|阻塞状态，表示线程阻塞于锁|
+|WAITING|等待状态，表示线程进入等待状态，进入该状态表示当前线程需要等待其他线程做出一些特定动作(通知或中断)|
+|TIME_WAITING|超时等待状态，该状态不同于WATING，它是可以直指定时间自行返回的|
+|TERMINATED|终止状态，表示当前线程已经执行完毕|
+
+
+
+## ThreadLocal使用
+ThreadLocal，很多地方叫做线程本地变量，也有些地方叫做线程本地存储，其实意思差不多。可能很多朋友都知道ThreadLocal为变量在每个线程中都创建了一个副本，那么每个线程可以访问自己内部的副本变量。
+
+
+
+## 锁接口
+## AQS
+
+## 读写锁
+
+## 锁膨胀，锁消除，锁升级
+
+## ConcurrentHashMap
+
+## ForkJoin
+
+## CountDownLatch
+
+## 同步屏障CyclicBarrier
+
+## 控制并发线程数的Semaphore
+
+## 线程池
+首先检测线程池运行状态，如果不是RUNNING,则直接拒绝，线程池要保证在RUNNING的状态下执行任务。
+如果workerCount < corePoolSize，则创建并启动一个线程来执行新提交的任务
+如果workerCount >= corePoolSize，且线程池内的阻塞队列末满，则将任务添加到该阻塞队列中
+如果workerCount >= corePoolSize && workerCount < maximumPoolSize，且线程池内的阻塞队列已满，则创建并启动一个线程来执行新提交的任务。
+如果corkerCount >= maximumPoolSize，并且线程池内的阻塞队列已满，则根据拒绝策略来处理该任务，默认的处理方式是直接抛异常
+
+```java
+public void execute(Runnable command) {
+    if (command == null)
+        throw new NullPointerException();
+        /**
+        *
+        * execute流程：
+        * 如果当前woker线程的数量 < corePoolSize，进入addWorker(core = true)方法
+        * 否则将任务入队列： 如果入队列成功，再次判断线程池的状态，如果不是running状态，将该任务remove掉，并执行拒绝流程
+        *                  如果线程池不是running状态或入队列失败，进入addWorker(core = false)，如果进入失败，则拒绝任务 
+        *
+        */
+    int c = ctl.get();
+    if (workerCountOf(c) < corePoolSize) {
+        if (addWorker(command, true))
+            return;
+        c = ctl.get();
+    }
+    if (isRunning(c) && workQueue.offer(command)) {
+        int recheck = ctl.get();
+        if (! isRunning(recheck) && remove(command))
+            reject(command);
+        else if (workerCountOf(recheck) == 0)
+            addWorker(null, false);
+    }
+    else if (!addWorker(command, false))
+        reject(command);
+}
+
+// addWorker(null, false) 目的就是新一个线程
+private boolean addWorker(Runnable firstTask, boolean core) {
+    retry:
+    for (;;) {
+        int c = ctl.get();
+        int rs = runStateOf(c);
+
+        // Check if queue empty only if necessary.
+        if (rs >= SHUTDOWN && 
+            ! (rs == SHUTDOWN && // 如果线程状态为shutdown，且firstTask为空，且workQueue不为空，继续流程，否则返回false
+                firstTask == null &&
+                ! workQueue.isEmpty()))
+            return false;
+
+        for (;;) {
+            int wc = workerCountOf(c);
+            // 如果当前线程数 >= 线程允许的容量，或者 当前线程数 >= corePoolSize : maximumPoolSize，返回false
+            if (wc >= CAPACITY || wc >= (core ? corePoolSize : maximumPoolSize))
+                return false;
+                // woker个数加1
+            if (compareAndIncrementWorkerCount(c))
+                break retry;
+            c = ctl.get();  // Re-read ctl
+            if (runStateOf(c) != rs)
+                continue retry;
+            // else CAS failed due to workerCount change; retry inner loop
+        }
+    }
+
+    boolean workerStarted = false;
+    boolean workerAdded = false;
+    Worker w = null;
+    try {
+        w = new Worker(firstTask);
+        final Thread t = w.thread;
+        if (t != null) {
+            final ReentrantLock mainLock = this.mainLock;
+            mainLock.lock();
+            try {
+                // 再次检测线程池的状态
+                int rs = runStateOf(ctl.get());
+                // rs是running的状态或者线程池的状态是shutdown，但是firstTask == null
+                if (rs < SHUTDOWN ||
+                    (rs == SHUTDOWN && firstTask == null)) {
+                    if (t.isAlive()) // precheck that t is startable
+                        throw new IllegalThreadStateException();
+                    workers.add(w);
+                    int s = workers.size();
+                    if (s > largestPoolSize)
+                        largestPoolSize = s;
+                    workerAdded = true;
+                }
+            } finally {
+                mainLock.unlock();
+            }
+            if (workerAdded) {
+                t.start();
+                workerStarted = true;
+            }
+        }
+    } finally {
+        if (! workerStarted)
+            addWorkerFailed(w);
+    }
+    return workerStarted;
+}
+
+// Worker实现了runnable接口，run()方法执行runWorker()方法，即上面函数中的t.start()
+// Worker继承AbstractQueueSynchronized类，为了控制Worker的中断信息。
+final void runWorker(Worker w) {
+    Thread wt = Thread.currentThread();
+    Runnable task = w.firstTask;
+    w.firstTask = null;
+    w.unlock(); // allow interrupts
+    // 当前是否有异常，默认是有的
+    boolean completedAbruptly = true;
+    try {
+        // 如果当前任务或者阻塞队列没有可执行的任务，退出循环
+        while (task != null || (task = getTask()) != null) {
+            w.lock();
+            // If pool is stopping, ensure thread is interrupted;
+            // if not, ensure thread is not interrupted.  This
+            // requires a recheck in second case to deal with
+            // shutdownNow race while clearing interrupt
+            // 如果当前线程是stop，tidying或teerminate状态，确保Thread是interrupted
+            if ((runStateAtLeast(ctl.get(), STOP) || (Thread.interrupted() 
+                                                        && runStateAtLeast(ctl.get(), STOP))) 
+                                                        && !wt.isInterrupted())
+                wt.interrupt();
+            try {
+                beforeExecute(wt, task); // 子类实现
+                Throwable thrown = null;
+                try {
+                    task.run();
+                } catch (RuntimeException x) {
+                    thrown = x; throw x;
+                } catch (Error x) {
+                    thrown = x; throw x;
+                } catch (Throwable x) {
+                    thrown = x; throw new Error(x);
+                } finally {
+                    afterExecute(task, thrown); // 子类实现
+                }
+            } finally {
+                task = null;
+                w.completedTasks++;
+                w.unlock();
+            }
+        }
+        completedAbruptly = false;
+    } finally {
+        processWorkerExit(w, completedAbruptly);
+    }
+}
+
+private void processWorkerExit(Worker w, boolean completedAbruptly) {
+    if (completedAbruptly) // If abrupt, then workerCount wasn't adjusted
+        decrementWorkerCount();
+
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        completedTaskCount += w.completedTasks;
+        workers.remove(w);
+    } finally {
+        mainLock.unlock();
+    }
+
+    tryTerminate();
+
+    int c = ctl.get();
+    // 当线程池是running或shutdown状态时，如果worker是异常结束，那么会直接addWorker
+    // 如果allowCoreThreadTimeOut=true,并且等待队列有任务，至少保留一个worker
+    // 如果allowCoreThreadTimeOut=false，worker不少于corePoolSize
+    if (runStateLessThan(c, STOP)) {
+        if (!completedAbruptly) {
+            // 没有用户异常产生
+            int min = allowCoreThreadTimeOut ? 0 : corePoolSize;
+            if (min == 0 && ! workQueue.isEmpty())
+                min = 1;
+            if (workerCountOf(c) >= min)
+                return; // replacement not needed
+        }
+        addWorker(null, false);
+    }
+}
+
+private Runnable getTask() {
+    boolean timedOut = false; // Did the last poll() time out?
+
+    for (;;) {
+        int c = ctl.get();
+        int rs = runStateOf(c);
+
+        // 如果线程池的状态是shutdown，stop，tidying,terminated，且队列为空，返回null
+        if (rs >= SHUTDOWN && (rs >= STOP || workQueue.isEmpty())) {
+            decrementWorkerCount();
+            return null;
+        }
+
+        int wc = workerCountOf(c);
+
+        // Are workers subject to culling?
+        // 如果allowCoreThreadTimeOut或者worker线程数比corePoolSize大
+        boolean timed = allowCoreThreadTimeOut || wc > corePoolSize;
+        // wc > maximumPoolSize的情况是因为可能在此方法执行阶段同时执行了setMaximumPoolSize方法
+        // timed && timedOut如果为true，表示当前操作进行超时控制，并且上次从阻塞队列中获取任务发生了超时
+        // 接下来判断，如果有效线程数量 > 1，或者阻塞队列是空的，那么尝试将workerCount减1;
+        // 如果减1失败，则返回重试。
+        // 如果wc == 1，也就说明当前线程是线程池唯一的一个线程
+        if ((wc > maximumPoolSize || (timed && timedOut))
+            && (wc > 1 || workQueue.isEmpty())) {
+            if (compareAndDecrementWorkerCount(c))
+                return null;
+            continue;
+        }
+
+        try {
+            Runnable r = timed ?
+                workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
+                workQueue.take(); // take是阻塞的
+            if (r != null)
+                return r;
+            timedOut = true;
+        } catch (InterruptedException retry) {
+            timedOut = false;
+        }
+    }
+}
+```
