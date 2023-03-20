@@ -2,6 +2,7 @@
 title: Java虚拟机
 date: 2023-02-24 19:20:35
 tags: 面试 Java基绌
+categories: 面试
 ---
 # JAVA内存区域与内存溢出异常
 ## 运行时数据区域

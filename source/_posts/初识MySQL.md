@@ -1,8 +1,8 @@
 ---
-title: 初识MySQL
+title: MySQL
 date: 2022-03-29 23:00:13
-tags: 初识MySQL,MySQL文件
-categories: MySQL
+tags: 面试,MySQL
+categories: 面试
 ---
 MySQL使用TCP作为MySQL服务器程序和客户端程序之间的网络通信协议。
 

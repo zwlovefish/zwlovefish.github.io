@@ -2,6 +2,7 @@
 title: redis
 date: 2023-03-06 12:49:13
 tags: 面试 Redis
+categories: 面试
 ---
 
 # redis的过期策略

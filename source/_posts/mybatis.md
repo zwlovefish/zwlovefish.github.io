@@ -2,6 +2,7 @@
 title: mybatis
 date: 2023-03-08 12:28:03
 tags: 面试 mybatis
+categories: 面试
 ---
 # JDBC 有几个步骤？
 1. 加载驱动程序
