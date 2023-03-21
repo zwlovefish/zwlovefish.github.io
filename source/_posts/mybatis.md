@@ -648,99 +648,98 @@ mybatis在spring中的启动流程是：
     return statementHandler;
   }
 
-    public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+  // 1. CallableStatementHandler是处理存储过程的
+  // 2. SimpleStatementHandler处理sql中不含有参数的，即sql中不含有参数
+  // 3. PreparedStatementHandler则处理sql中有?的需要预编译的sql:
+public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
 
-    switch (ms.getStatementType()) {
-      case STATEMENT:
-        delegate = new SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-        break;
-      case PREPARED:
-        delegate = new PreparedStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-        break;
-      case CALLABLE:
-        delegate = new CallableStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-        break;
-      default:
-        throw new ExecutorException("Unknown statement type: " + ms.getStatementType());
-    }
-
+  switch (ms.getStatementType()) {
+    case STATEMENT:
+      delegate = new SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+      break;
+    case PREPARED:
+      delegate = new PreparedStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+      break;
+    case CALLABLE:
+      delegate = new CallableStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+      break;
+    default:
+      throw new ExecutorException("Unknown statement type: " + ms.getStatementType());
   }
 
-  protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
-    this.configuration = mappedStatement.getConfiguration();
-    this.executor = executor;
-    this.mappedStatement = mappedStatement;
-    this.rowBounds = rowBounds;
+}
 
-    this.typeHandlerRegistry = configuration.getTypeHandlerRegistry();
-    this.objectFactory = configuration.getObjectFactory();
+protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+  this.configuration = mappedStatement.getConfiguration();
+  this.executor = executor;
+  this.mappedStatement = mappedStatement;
+  this.rowBounds = rowBounds;
 
-    if (boundSql == null) { // issue #435, get the key before calculating the statement
-      generateKeys(parameterObject);
-      boundSql = mappedStatement.getBoundSql(parameterObject);
-    }
+  this.typeHandlerRegistry = configuration.getTypeHandlerRegistry();
+  this.objectFactory = configuration.getObjectFactory();
 
-    this.boundSql = boundSql;
-    // 设置参数handler和结果handler
-    this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
-    this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds, parameterHandler, resultHandler, boundSql);
+  if (boundSql == null) { // issue #435, get the key before calculating the statement
+    generateKeys(parameterObject);
+    boundSql = mappedStatement.getBoundSql(parameterObject);
   }
 
-  // 然后通过上面三个StatementHandler中各自的query，update执行sql语句从db中查询数据，并且通过上面设置的结果handler处理查出来的结果
-```
-```java
-  // org.apache.ibatis.scripting.defaults.DefaultParameterHandler
-  public void setParameters(PreparedStatement ps) {
-    ErrorContext.instance().activity("setting parameters").object(mappedStatement.getParameterMap().getId());
-    List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-    if (parameterMappings != null) {
-      for (int i = 0; i < parameterMappings.size(); i++) {
-        ParameterMapping parameterMapping = parameterMappings.get(i);
-        if (parameterMapping.getMode() != ParameterMode.OUT) {
-          Object value;
-          String propertyName = parameterMapping.getProperty();
-          if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
-            value = boundSql.getAdditionalParameter(propertyName);
-          } else if (parameterObject == null) {
-            value = null;
-          } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
-            value = parameterObject;
-          } else {
-            MetaObject metaObject = configuration.newMetaObject(parameterObject);
-            value = metaObject.getValue(propertyName);
-          }
-          TypeHandler typeHandler = parameterMapping.getTypeHandler();
-          JdbcType jdbcType = parameterMapping.getJdbcType();
-          if (value == null && jdbcType == null) {
-            jdbcType = configuration.getJdbcTypeForNull();
-          }
-          try {
-            typeHandler.setParameter(ps, i + 1, value, jdbcType);
-          } catch (TypeException | SQLException e) {
-            throw new TypeException("Could not set parameters for mapping: " + parameterMapping + ". Cause: " + e, e);
-          }
-        }
-      }
-    }
-  }
-```
+  this.boundSql = boundSql;
+  // 设置参数handler和结果handler
+  this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
+  this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds, parameterHandler, resultHandler, boundSql);
+}
 
-```java
-// 结果handler：org.apache.ibatis.executor.resultset.DefaultResultSetHandler
-  public void handleOutputParameters(CallableStatement cs) throws SQLException {
-    final Object parameterObject = parameterHandler.getParameterObject();
-    final MetaObject metaParam = configuration.newMetaObject(parameterObject);
-    final List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+// 然后通过上面三个StatementHandler中各自的query，update执行sql语句从db中查询数据，并且通过上面设置的结果handler处理查出来的结果
+// org.apache.ibatis.scripting.defaults.DefaultParameterHandler
+public void setParameters(PreparedStatement ps) {
+  ErrorContext.instance().activity("setting parameters").object(mappedStatement.getParameterMap().getId());
+  List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+  if (parameterMappings != null) {
     for (int i = 0; i < parameterMappings.size(); i++) {
-      final ParameterMapping parameterMapping = parameterMappings.get(i);
-      if (parameterMapping.getMode() == ParameterMode.OUT || parameterMapping.getMode() == ParameterMode.INOUT) {
-        if (ResultSet.class.equals(parameterMapping.getJavaType())) {
-          handleRefCursorOutputParameter((ResultSet) cs.getObject(i + 1), parameterMapping, metaParam);
+      ParameterMapping parameterMapping = parameterMappings.get(i);
+      if (parameterMapping.getMode() != ParameterMode.OUT) {
+        Object value;
+        String propertyName = parameterMapping.getProperty();
+        if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
+          value = boundSql.getAdditionalParameter(propertyName);
+        } else if (parameterObject == null) {
+          value = null;
+        } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
+          value = parameterObject;
         } else {
-          final TypeHandler<?> typeHandler = parameterMapping.getTypeHandler();
-          metaParam.setValue(parameterMapping.getProperty(), typeHandler.getResult(cs, i + 1));
+          MetaObject metaObject = configuration.newMetaObject(parameterObject);
+          value = metaObject.getValue(propertyName);
+        }
+        TypeHandler typeHandler = parameterMapping.getTypeHandler();
+        JdbcType jdbcType = parameterMapping.getJdbcType();
+        if (value == null && jdbcType == null) {
+          jdbcType = configuration.getJdbcTypeForNull();
+        }
+        try {
+          typeHandler.setParameter(ps, i + 1, value, jdbcType);
+        } catch (TypeException | SQLException e) {
+          throw new TypeException("Could not set parameters for mapping: " + parameterMapping + ". Cause: " + e, e);
         }
       }
     }
   }
+}
+
+// 结果handler：org.apache.ibatis.executor.resultset.DefaultResultSetHandler
+public void handleOutputParameters(CallableStatement cs) throws SQLException {
+  final Object parameterObject = parameterHandler.getParameterObject();
+  final MetaObject metaParam = configuration.newMetaObject(parameterObject);
+  final List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+  for (int i = 0; i < parameterMappings.size(); i++) {
+    final ParameterMapping parameterMapping = parameterMappings.get(i);
+    if (parameterMapping.getMode() == ParameterMode.OUT || parameterMapping.getMode() == ParameterMode.INOUT) {
+      if (ResultSet.class.equals(parameterMapping.getJavaType())) {
+        handleRefCursorOutputParameter((ResultSet) cs.getObject(i + 1), parameterMapping, metaParam);
+      } else {
+        final TypeHandler<?> typeHandler = parameterMapping.getTypeHandler();
+        metaParam.setValue(parameterMapping.getProperty(), typeHandler.getResult(cs, i + 1));
+      }
+    }
+  }
+}
 ```
