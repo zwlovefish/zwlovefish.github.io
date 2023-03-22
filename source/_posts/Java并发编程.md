@@ -372,3 +372,172 @@ private Runnable getTask() {
     }
 }
 ```
+
+# JAVA捕获异常的几种方式
+1. 实现UncaughtExceptionHandler接口，JDK5之后允许我们在每一个Thread对象上添加一个异常处理器UncaughtExceptionHandler 。
+```java
+//Thread类中的接口
+public interface UncaughtExceptionHanlder {
+	void uncaughtException(Thread t, Throwable e);
+}
+// 自定义异常捕获器
+public class MyUnchecckedExceptionhandler implements UncaughtExceptionHandler {
+    @Override
+    public void uncaughtException(Thread t, Throwable e) {
+        System.out.println("捕获异常处理方法：" + e);
+    }
+}
+
+Thread t = new Thread(new ExceptionThread());
+t.setUncaughtExceptionHandler(new MyUnchecckedExceptionhandler());
+t.start();
+```
+
+2. 使用线程池时，可以在ThreadFactory中设置
+```java
+ExecutorService exec = Executors.newCachedThreadPool(new ThreadFactory(){
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r);
+                thread.setUncaughtExceptionHandler(new MyUnchecckedExceptionhandler());
+                return thread;
+            }
+});
+exec.execute(new ExceptionThread());
+```
+通过execute方式提交的任务，能将它抛出的异常交给异常处理器。
+
+如果改成submit方式提交任务，则异常不能被异常处理器捕获，查看源码后可以发现，如果一个由submit提交的任务由于抛出了异常而结束，那么这个异常将被Future.get封装在ExecutionException中重新抛出。
+```java
+// java.util.concurrent.FutureTask 源码
+
+public V get() throws InterruptedException, ExecutionException {
+    int s = state;
+    if (s <= COMPLETING)//如果任务没有结束，则等待结束
+        s = awaitDone(false, 0L);
+    return report(s);//如果执行结束，则报告执行结果
+}
+@SuppressWarnings("unchecked")
+private V report(int s) throws ExecutionException {
+    Object x = outcome;
+    if (s == NORMAL)//如果执行正常，则返回结果
+        return (V)x;
+    if (s >= CANCELLED)//如果任务被取消，调用get则报CancellationException
+        throw new CancellationException();
+    throw new ExecutionException((Throwable)x);//执行异常，则抛出ExecutionException
+}
+```
+
+3. 使用线程组ThreadGroup
+```java
+//1.创建线程组
+ThreadGroup threadGroup =
+        // 这是匿名类写法
+        new ThreadGroup("group") {
+            // 继承ThreadGroup并重新定义以下方法
+            // 在线程成员抛出unchecked exception 会执行此方法
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                //4.处理捕获的线程异常
+            }
+        };
+//2.创建Thread        
+Thread thread = new Thread(threadGroup, new Runnable() {
+    @Override
+    public void run() {
+        System.out.println(1 / 0);
+
+    }
+}, "my_thread");  
+//3.启动线程
+thread.start();   
+```
+
+4. 默认的线程异常捕获器
+```java
+// 如果我们只需要一个线程异常处理器处理线程的异常，那么我们可以设置一个默认的线程异常处理器，当线程出现异常时，
+// 如果我们没有指定线程的异常处理器，而且线程组也没有设置，那么就会使用默认的线程异常处理器
+// 设置默认的线程异常捕获处理器
+Thread.setDefaultUncaughtExceptionHandler(new MyUnchecckedExceptionhandler());
+```
+
+5. 使用FetureTask来捕获异常
+```java
+//1.创建FeatureTask
+FutureTask<Integer> futureTask = new FutureTask<>(new Callable<Integer>() {
+    @Override
+    public Integer call() throws Exception {
+        return 1/0;
+    }
+});
+//2.创建Thread
+Thread thread = new Thread(futureTask);
+//3.启动线程
+thread.start();
+try {
+    Integer result = futureTask.get();
+} catch (InterruptedException e) {
+    e.printStackTrace();
+} catch (ExecutionException e) {
+    //4.处理捕获的线程异常
+}
+```
+
+6. 利用线程池提交线程时返回的Feature引用
+```java
+//1.创建线程池
+ExecutorService executorService = Executors.newFixedThreadPool(10);
+//2.创建Callable，有返回值的，你也可以创建一个线程实现Callable接口。
+//  如果你不需要返回值，这里也可以创建一个Thread即可，在第3步时submit这个thread。
+Callable<Integer> callable = new Callable<Integer>() {
+    @Override
+    public Integer call() throws Exception {
+        return 1/0;
+    }
+};
+//3.提交待执行的线程
+Future<Integer> future = executorService.submit(callable);
+try {
+     Integer result = future.get();
+} catch (InterruptedException e) {
+    e.printStackTrace();
+} catch (ExecutionException e) {
+    //4.处理捕获的线程异常
+}
+```
+
+7. 重写ThreadPoolExecutor的afterExecute方法
+```java
+//1.创建线程池
+ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>()) {
+    @Override
+    protected void afterExecute(Runnable r, Throwable t) {
+        if (r instanceof Thread) {
+            if (t != null) {
+                //处理捕获的异常
+            }
+        } else if (r instanceof FutureTask) {
+            FutureTask futureTask = (FutureTask) r;
+            try {
+                futureTask.get();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                //处理捕获的异常
+            }
+        }
+
+    }
+};
+
+
+Thread t1 = new Thread(() -> {
+    int c = 1 / 0;
+});
+threadPoolExecutor.execute(t1);
+
+Callable<Integer> callable = () -> 2 / 0;
+threadPoolExecutor.submit(callable);
+
+```
