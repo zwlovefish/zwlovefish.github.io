@@ -373,6 +373,12 @@ private Runnable getTask() {
 }
 ```
 
+# 线程池的拒绝策略
+1. CallerRunsPolicy - 当触发拒绝策略，只要线程池没有关闭的话，则使用调用线程直接运行任务。一般并发比较小，性能要求不高，不允许失败。但是，由于调用者自己运行任务，如果任务提交速度过快，可能导致程序阻塞，性能效率上必然的损失较大
+2. AbortPolicy - 丢弃任务，并抛出拒绝执行 RejectedExecutionException 异常信息。线程池默认的拒绝策略。必须处理好抛出的异常，否则会打断当前的执行流程，影响后续的任务执行。
+3. DiscardPolicy - 直接丢弃，其他啥都没有
+4. DiscardOldestPolicy - 当触发拒绝策略，只要线程池没有关闭的话，丢弃阻塞队列 workQueue 中最老的一个任务，并将新任务加入
+
 # JAVA捕获异常的几种方式
 1. 实现UncaughtExceptionHandler接口，JDK5之后允许我们在每一个Thread对象上添加一个异常处理器UncaughtExceptionHandler 。
 ```java
