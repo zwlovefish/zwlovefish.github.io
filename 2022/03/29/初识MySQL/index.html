@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.0.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha256-Z1K5uhUaJXA7Ll0XrZ/0JhX4lAtZFpT6jkKrEDT0drU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.14.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="MySQL使用TCP作为MySQL服务器程序和客户端程序之间的网络通信协议。 MySQL服务器启动脚本mysqld 执行mysqld可以打开一个MySQL进程mysqld_safe 执行mysqld_safe会间接调用mysqld，并监控其状态， 如果MySQL服务器出现错误，会重新启动服务器程序，并将出错信息打印到日志mysql.server 间接调用mysqld_safe，执行mysql.se">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL">
+<meta property="og:url" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/index.html">
+<meta property="og:site_name" content="zwlovefishの博客">
+<meta property="og:description" content="MySQL使用TCP作为MySQL服务器程序和客户端程序之间的网络通信协议。 MySQL服务器启动脚本mysqld 执行mysqld可以打开一个MySQL进程mysqld_safe 执行mysqld_safe会间接调用mysqld，并监控其状态， 如果MySQL服务器出现错误，会重新启动服务器程序，并将出错信息打印到日志mysql.server 间接调用mysqld_safe，执行mysql.se">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%9F%A5%E8%AF%A2%E8%AF%B7%E6%B1%82%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%AF%94%E8%BE%83%E8%A7%84%E5%88%99%E5%90%8D%E7%A7%B0%E5%90%8E%E7%BC%80%E8%8B%B1%E6%96%87%E9%87%8A%E4%B9%89%E5%8F%8A%E6%8F%8F%E8%BF%B0.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/client%E4%B8%8Eserver%E9%80%9A%E4%BF%A1%E8%BF%87%E7%A8%8B%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84%E5%AD%97%E7%AC%A6%E9%9B%86.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/Compact%E7%9A%84%E8%A1%8C%E6%A0%BC%E5%BC%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/Redundant%E7%9A%84%E8%A1%8C%E6%A0%BC%E5%BC%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%BA%A2%E5%87%BA%E5%88%97.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%AE%B0%E5%BD%95%E5%9C%A8%E9%A1%B5%E7%9A%84UserRecords%E7%9A%84%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E4%BD%BF%E7%94%A8%E7%AE%AD%E5%A4%B4%E4%BB%A3%E6%9B%BFnext_record%E7%9A%84%E5%80%BC.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%AE%B0%E5%BD%95%E5%9C%A8%E9%A1%B5%E7%9A%84UserRecords%E7%9A%84%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%AE%B0%E5%BD%95%E5%92%8CPageDirectory%E7%9A%84%E5%85%B3%E7%B3%BB.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E9%A1%B5%E4%B8%AD%E8%AE%B0%E5%BD%95.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E4%B8%BA%E9%A1%B5%E7%BC%96%E5%88%B6%E7%9B%AE%E5%BD%95.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E5%B0%86%E7%9B%AE%E5%BD%95%E9%A1%B9%E6%94%BE%E5%88%B0%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%9A%84%E6%95%88%E6%9E%9C.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E7%94%9F%E6%88%90%E6%9B%B4%E9%AB%98%E9%AB%98%E7%BA%A7%E7%9B%AE%E5%BD%95%E9%A1%B9%E8%AE%B0%E5%BD%95%E7%9A%84%E6%95%B0%E6%8D%AE%E9%A1%B5.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%81%94%E5%90%88%E7%B4%A2%E5%BC%95%E7%A4%BA%E6%84%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E4%BD%BF%E7%94%A8MyISAM%E4%BD%9C%E4%B8%BA%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E%E5%9C%A8%E5%AD%98%E5%82%A8%E7%A9%BA%E9%97%B4%E4%B8%AD%E7%9A%84%E8%A1%A8%E7%A4%BA.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%AF%8F%E4%B8%AA%E7%BB%84%E7%9A%84%E9%A1%B5%E9%9D%A2%E7%B1%BB%E5%9E%8B.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/XDES_Entry%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/ListBaseNode.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/INODE_Entry.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/FSP_HDR%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%A1%B5%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/File_Space_Header.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/XDES%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%A1%B5%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/INODE%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%A1%B5%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/Segment_Header%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E7%B3%BB%E7%BB%9F%E8%A1%A8%E7%A9%BA%E9%97%B4%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E9%A1%B5%E5%8F%B7%E4%B8%BA7%E7%9A%84%E9%A1%B5%E7%9A%84%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86%E5%8F%8A%E5%85%B6%E6%8F%8F%E8%BF%B0.png">
+<meta property="article:published_time" content="2022-03-29T15:00:13.000Z">
+<meta property="article:modified_time" content="2023-05-18T14:35:21.072Z">
+<meta property="article:author" content="zhou jianwei">
+<meta property="article:tag" content="面试,MySQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%9F%A5%E8%AF%A2%E8%AF%B7%E6%B1%82%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B.png">
+
+
+<link rel="canonical" href="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/","path":"2022/03/29/初识MySQL/","title":"MySQL"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MySQL | zwlovefishの博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">zwlovefishの博客</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">我们的征途是星辰大海</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#MySQL%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%90%AF%E5%8A%A8%E8%84%9A%E6%9C%AC"><span class="nav-number">1.</span> <span class="nav-text">MySQL服务器启动脚本</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">配置文件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84%E5%86%85%E5%AE%B9"><span class="nav-number">2.1.</span> <span class="nav-text">配置文件的内容</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84%E4%BC%98%E5%85%88%E7%BA%A7"><span class="nav-number">2.2.</span> <span class="nav-text">配置文件的优先级</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E5%8F%98%E9%87%8F"><span class="nav-number">3.</span> <span class="nav-text">系统变量</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%8A%B6%E6%80%81%E5%8F%98%E9%87%8F"><span class="nav-number">4.</span> <span class="nav-text">状态变量</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E9%9B%86%E5%92%8C%E6%AF%94%E8%BE%83%E8%A7%84%E5%88%99"><span class="nav-number">5.</span> <span class="nav-text">字符集和比较规则</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E5%92%8C%E6%AF%94%E8%BE%83%E8%A7%84%E5%88%99"><span class="nav-number">5.1.</span> <span class="nav-text">查看和比较规则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MySQL%E7%9A%84%E5%AD%97%E7%AC%A6%E9%9B%86%E4%B8%8E%E6%AF%94%E8%BE%83%E8%A7%84%E5%88%99"><span class="nav-number">5.2.</span> <span class="nav-text">MySQL的字符集与比较规则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%80%9A%E4%BF%A1%E8%BF%87%E7%A8%8B%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84%E5%AD%97%E7%AC%A6%E9%9B%86"><span class="nav-number">5.3.</span> <span class="nav-text">客户端与服务器通信过程中使用的字符集</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#InnoDB%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84"><span class="nav-number">6.</span> <span class="nav-text">InnoDB存储结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#InnoDB%E9%A1%B5"><span class="nav-number">6.1.</span> <span class="nav-text">InnoDB页</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#InnoDB%E8%A1%8C%E7%BB%93%E6%9E%84"><span class="nav-number">6.2.</span> <span class="nav-text">InnoDB行结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%87%E5%AE%9A%E8%A1%8C%E7%BB%93%E6%9E%84%E8%AF%AD%E6%B3%95"><span class="nav-number">6.2.1.</span> <span class="nav-text">指定行结构语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#COMPACT%E8%A1%8C%E6%A0%BC%E5%BC%8F"><span class="nav-number">6.2.2.</span> <span class="nav-text">COMPACT行格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#REDUNDANT%E8%A1%8C%E6%A0%BC%E5%BC%8F"><span class="nav-number">6.2.3.</span> <span class="nav-text">REDUNDANT行格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BA%A2%E5%87%BA%E5%88%97"><span class="nav-number">6.2.4.</span> <span class="nav-text">溢出列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DYNAMIC%E8%A1%8C%E6%A0%BC%E5%BC%8F%E5%92%8CCOMPRESSED%E8%A1%8C%E6%A0%BC%E5%BC%8F"><span class="nav-number">6.2.5.</span> <span class="nav-text">DYNAMIC行格式和COMPRESSED行格式</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#InnoDB%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%BB%93%E6%9E%84"><span class="nav-number">7.</span> <span class="nav-text">InnoDB数据页结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#User-Records%E5%92%8CFree-Space"><span class="nav-number">7.1.</span> <span class="nav-text">User Records和Free Space</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Finfimum%E5%92%8CSupremum"><span class="nav-number">7.2.</span> <span class="nav-text">Finfimum和Supremum</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Page-Directory"><span class="nav-number">7.3.</span> <span class="nav-text">Page Directory</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Page-Header"><span class="nav-number">7.4.</span> <span class="nav-text">Page Header</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#File-Header"><span class="nav-number">7.5.</span> <span class="nav-text">File Header</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#File-Trailer"><span class="nav-number">7.6.</span> <span class="nav-text">File Trailer</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BF%AB%E9%80%9F%E6%9F%A5%E8%AF%A2%E7%9A%84%E7%B4%A2%E5%BC%95%E2%80%94%E2%80%94B-%E6%A0%91"><span class="nav-number">8.</span> <span class="nav-text">快速查询的索引——B+树</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BB%BA%E7%AB%8B%E7%B4%A2%E5%BC%95%E7%9A%84%E8%AF%AD%E5%8F%A5"><span class="nav-number">8.1.</span> <span class="nav-text">建立索引的语句</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84%E7%B4%A2%E5%BC%95%E6%96%B9%E6%A1%88"><span class="nav-number">8.2.</span> <span class="nav-text">一个简单的索引方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#InnoDB%E7%9A%84%E7%B4%A2%E5%BC%95%E6%96%B9%E6%A1%88"><span class="nav-number">8.3.</span> <span class="nav-text">InnoDB的索引方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%81%9A%E7%B0%87%E7%B4%A2%E5%BC%95"><span class="nav-number">8.3.1.</span> <span class="nav-text">聚簇索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8C%E7%BA%A7%E7%B4%A2%E5%BC%95"><span class="nav-number">8.3.2.</span> <span class="nav-text">二级索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%81%94%E5%90%88%E7%B4%A2%E5%BC%95"><span class="nav-number">8.3.3.</span> <span class="nav-text">联合索引</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#InnoDB%E4%B8%ADB-%E6%A0%91%E7%B4%A2%E5%BC%95%E7%9A%84%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">8.3.4.</span> <span class="nav-text">InnoDB中B+树索引的注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MyISAM%E7%9A%84%E7%B4%A2%E5%BC%95%E6%96%B9%E6%A1%88"><span class="nav-number">8.4.</span> <span class="nav-text">MyISAM的索引方案</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%9A%84%E5%AE%B6%E2%80%94%E2%80%94MySQL%E7%9A%84%E6%95%B0%E6%8D%AE%E7%9B%AE%E5%BD%95"><span class="nav-number">9.</span> <span class="nav-text">数据的家——MySQL的数据目录</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%9B%AE%E5%BD%95"><span class="nav-number">9.1.</span> <span class="nav-text">数据目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E5%9C%A8%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E4%B8%AD%E7%9A%84%E8%A1%A8%E7%A4%BA"><span class="nav-number">9.2.</span> <span class="nav-text">数据库在文件系统中的表示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%A8%E5%9C%A8%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E4%B8%AD%E7%9A%84%E8%A1%A8%E7%A4%BA"><span class="nav-number">9.3.</span> <span class="nav-text">表在文件系统中的表示</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#InnoDB"><span class="nav-number">9.3.1.</span> <span class="nav-text">InnoDB</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MyISAM"><span class="nav-number">9.3.2.</span> <span class="nav-text">MyISAM</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E7%9A%84%E6%96%87%E4%BB%B6"><span class="nav-number">9.4.</span> <span class="nav-text">其他的文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%AF%B9%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E5%BD%B1%E5%93%8D"><span class="nav-number">9.5.</span> <span class="nav-text">文件系统对数据库的影响</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MySQL%E7%B3%BB%E7%BB%9F%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%AE%80%E4%BB%8B"><span class="nav-number">9.6.</span> <span class="nav-text">MySQL系统数据库的简介</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AD%98%E6%94%BE%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%A4%A7%E6%B1%A0%E5%AD%90"><span class="nav-number">10.</span> <span class="nav-text">存放页面的大池子</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8B%AC%E7%AB%8B%E8%A1%A8%E7%A9%BA%E9%97%B4%E7%BB%93%E6%9E%84"><span class="nav-number">10.1.</span> <span class="nav-text">独立表空间结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8C%BA%E7%9A%84%E6%A6%82%E5%BF%B5"><span class="nav-number">10.1.1.</span> <span class="nav-text">区的概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AE%B5%E7%9A%84%E6%A6%82%E5%BF%B5"><span class="nav-number">10.1.2.</span> <span class="nav-text">段的概念</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8C%BA%E7%9A%84%E5%88%86%E7%B1%BB"><span class="nav-number">10.2.</span> <span class="nav-text">区的分类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#XDES-Entry%E9%93%BE%E8%A1%A8"><span class="nav-number">10.2.1.</span> <span class="nav-text">XDES Entry链表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BE%E4%BE%8B"><span class="nav-number">10.2.2.</span> <span class="nav-text">举例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%93%BE%E8%A1%A8%E5%9F%BA%E8%8A%82%E7%82%B9"><span class="nav-number">10.2.3.</span> <span class="nav-text">链表基节点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%93%BE%E8%A1%A8%E5%B0%8F%E7%BB%93"><span class="nav-number">10.2.4.</span> <span class="nav-text">链表小结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AE%B5%E7%9A%84%E7%BB%93%E6%9E%84"><span class="nav-number">10.3.</span> <span class="nav-text">段的结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%84%E7%B1%BB%E5%9E%8B%E9%A1%B5%E9%9D%A2%E8%AF%A6%E7%BB%86%E6%83%85%E5%86%B5"><span class="nav-number">10.4.</span> <span class="nav-text">各类型页面详细情况</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FSP-HDR%E7%B1%BB%E5%9E%8B"><span class="nav-number">10.4.1.</span> <span class="nav-text">FSP_HDR类型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#File-Space-Header"><span class="nav-number">10.4.1.1.</span> <span class="nav-text">File Space Header</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#XDES-Entry"><span class="nav-number">10.4.1.2.</span> <span class="nav-text">XDES Entry</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#XDES%E7%B1%BB%E5%9E%8B"><span class="nav-number">10.4.2.</span> <span class="nav-text">XDES类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IBUF-BITMAP%E7%B1%BB%E5%9E%8B"><span class="nav-number">10.4.3.</span> <span class="nav-text">IBUF_BITMAP类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#INODE%E7%B1%BB%E5%9E%8B"><span class="nav-number">10.4.4.</span> <span class="nav-text">INODE类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Segment-Header%E7%BB%93%E6%9E%84"><span class="nav-number">10.4.5.</span> <span class="nav-text">Segment Header结构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E8%A1%A8%E7%A9%BA%E9%97%B4"><span class="nav-number">10.5.</span> <span class="nav-text">系统表空间</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E8%A1%A8%E7%A9%BA%E9%97%B4%E7%9A%84%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84"><span class="nav-number">10.5.1.</span> <span class="nav-text">系统表空间的整体结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#InnoDB%E6%95%B0%E6%8D%AE%E5%AD%97%E5%85%B8"><span class="nav-number">10.5.2.</span> <span class="nav-text">InnoDB数据字典</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SYS-TABLES%E8%A1%A8"><span class="nav-number">10.5.2.1.</span> <span class="nav-text">SYS_TABLES表</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SYS-COLUMNS%E8%A1%A8"><span class="nav-number">10.5.2.2.</span> <span class="nav-text">SYS_COLUMNS表</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SYS-INDEXES%E8%A1%A8"><span class="nav-number">10.5.2.3.</span> <span class="nav-text">SYS_INDEXES表</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SYS-FIELDS%E8%A1%A8"><span class="nav-number">10.5.2.4.</span> <span class="nav-text">SYS_FIELDS表</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Data-Dictionary-Header%E9%A1%B5%E9%9D%A2"><span class="nav-number">10.5.2.5.</span> <span class="nav-text">Data Dictionary Header页面</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#information-schema%E7%B3%BB%E7%BB%9F%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="nav-number">10.5.2.6.</span> <span class="nav-text">information_schema系统数据库</span></a></li></ol></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">zhou jianwei</p>
+  <div class="site-description" itemprop="description">Java小学生</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">19</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/29/%E5%88%9D%E8%AF%86MySQL/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="zhou jianwei">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zwlovefishの博客">
+      <meta itemprop="description" content="Java小学生">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MySQL | zwlovefishの博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MySQL
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-29 23:00:13" itemprop="dateCreated datePublished" datetime="2022-03-29T23:00:13+08:00">2022-03-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2023-05-18 22:35:21" itemprop="dateModified" datetime="2023-05-18T22:35:21+08:00">2023-05-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index"><span itemprop="name">面试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>MySQL使用TCP作为MySQL服务器程序和客户端程序之间的网络通信协议。</p>
+<h1 id="MySQL服务器启动脚本"><a href="#MySQL服务器启动脚本" class="headerlink" title="MySQL服务器启动脚本"></a>MySQL服务器启动脚本</h1><p><strong>mysqld</strong> 执行mysqld可以打开一个MySQL进程<br><strong>mysqld_safe</strong> 执行mysqld_safe会间接调用mysqld，并监控其状态， 如果MySQL服务器出现错误，会重新启动服务器程序，并将出错信息打印到日志<br><strong>mysql.server</strong> 间接调用mysqld_safe，执行<strong>mysql.server start&#x2F;stop</strong>即可开启和关闭MySQL服务器程序。<br><strong>mysql_mysqld_muti</strong> 可以在一台机器上启动多个MySQL服务器示例<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%9F%A5%E8%AF%A2%E8%AF%B7%E6%B1%82%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B.png" alt="查询请求执行过程"></p>
+<span id="more"></span>
+
+<h1 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h1><p>配置文件位置，类Unix会按照如表1所示路径查找配置文件<br>表1：</p>
+<table>
+<thead>
+<tr>
+<th align="center">路径名</th>
+<th align="center">备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">&#x2F;etc&#x2F;my.cnf</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">&#x2F;etc&#x2F;mysql&#x2F;my.cnf</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">SYSCONFDIR&#x2F;my.cnf</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">$MYSQL_HOME&#x2F;my.cnf</td>
+<td align="center">特定与服务器的选项(仅限于服务器</td>
+</tr>
+<tr>
+<td align="center">defaults-extra-file</td>
+<td align="center">命令行指定的额外配置文件路径</td>
+</tr>
+<tr>
+<td align="center">~&#x2F;.my.cnf</td>
+<td align="center">特定于用户的选项</td>
+</tr>
+<tr>
+<td align="center">~&#x2F;.mylogin.cnf</td>
+<td align="center">特定于用户的登录路径选项(仅限于客户端)</td>
+</tr>
+</tbody></table>
+<p><strong>注意：</strong></p>
+<ol>
+<li>SYSCONFDIR表示在使用CMake构建MySQL时使用SYSCONFDIR选项指定的目录</li>
+<li>.mylogin.cnf不是一个纯文本文件，只能使用mysql_config_editor实用程序处理</li>
+</ol>
+<h2 id="配置文件的内容"><a href="#配置文件的内容" class="headerlink" title="配置文件的内容"></a>配置文件的内容</h2><p>配置文件中的等号左右可以有空白符，而命令行不行，命令行不能有空白符。<br>可以在选项组的名称后加上特定的版本号，这样只能由该版本的程序使用该选项组的选项。eg.[mysqld-5.7]这样，只有版本为5.7的mysqld才能使用该选项组的选项<br>[server]<br>(具体的启动选项)<br>eg.<br>option1             #该选项不需要选项值<br>option2 &#x3D; value2    #该选项需要选项值<br>[mysqld]<br>(具体的启动选项)<br>[mysqld_safe]<br>(具体的启动选项)<br>[client]<br>(具体的启动选项)<br>[mysql]<br>(具体的启动选项)<br>[mysqladmin]<br>(具体的启动选项)</p>
+<p>[server]组里面的配置适用于所有的MySQL服务器程序<br>[client]组里面的配置适用于所有的client客户端程序</p>
+<table>
+<thead>
+<tr>
+<th align="center">程序名</th>
+<th align="center">类别</th>
+<th align="center">能读取的组</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">mysqld</td>
+<td align="center">启动服务器</td>
+<td align="center">[mysqld]、[server]</td>
+</tr>
+<tr>
+<td align="center">mysqld_safe</td>
+<td align="center">启动服务器</td>
+<td align="center">[mysqld]、[server]、[mysqld_safe]</td>
+</tr>
+<tr>
+<td align="center">mysql.server</td>
+<td align="center">启动服务器</td>
+<td align="center">[mysqld]、[server]、[mysql.server]</td>
+</tr>
+<tr>
+<td align="center">mysql</td>
+<td align="center">启动客户端</td>
+<td align="center">[mysql]、[client]</td>
+</tr>
+<tr>
+<td align="center">mysqladmin</td>
+<td align="center">启动客户端</td>
+<td align="center">[mysqladmin]、[client]</td>
+</tr>
+<tr>
+<td align="center">mysqldump</td>
+<td align="center">启动客户端</td>
+<td align="center">[mysqldump]、[client]</td>
+</tr>
+</tbody></table>
+<h2 id="配置文件的优先级"><a href="#配置文件的优先级" class="headerlink" title="配置文件的优先级"></a>配置文件的优先级</h2><p><strong>配置文件的优先级</strong>:会按照表1的顺序依次读取各个配置文件。如果多个路径下的配置文件中含有相同的属性，以最后一个为准。eg.在&#x2F;etc&#x2F;my.cnf中配置了default-storage-engine&#x3D;InnoDB，在~&#x2F;.my.cnf中配置default-storage-engine&#x3D;MyISAM。则以MyISAM为准。<br><strong>同配置文件多个组的优先级</strong>:以最后一个组中的启动选项为准。eg.在&#x2F;etc&#x2F;my.cnf中出现<br>“配置文件与命令行的优先级”:如果同一个选项出现在配置文件中和命令行中，则以命令行中的选项为准。<br>[server]<br>default-storeage-engine&#x3D;InnDB<br>[client]<br>default-storeage-engine&#x3D;MyISAM<br>则以MyISAM为准</p>
+<font color="red">
+default-extra-file和default-fifle分表表示额外配置和默认配置选项，只能用于命令行中
+</font>
+
+<h1 id="系统变量"><a href="#系统变量" class="headerlink" title="系统变量"></a>系统变量</h1><ol>
+<li><p>作用范围<br> 多个客户端程序可以连接同一个MySQL服务器程序。对于同一个系统变量，想让不同的客户端有不同的值，eg.客户端A想把default_storage_engine设置为MyISAM，客户端B想把default_storage_engine设置为InnoDB。MySQL有作用范围的概念——GLOBAL和SESSION。<br> <strong>GLOBAL</strong>:影响MySQL服务器的整体操作<br> <strong>SESSION</strong>:影响某个客户端连接的操作<br> 服务器启动时，会将每个全局系统变量初始化为其默认值。服务器还为每个客户端维护一组会话系统变量。客户端的会话变量在连接时使用相应全局系统变量的当前值进行初始化。<br> eg.以default_storage_engine为例，MySQL服务器启动时会初始化一个名为default_storage_engine，作用范围为GLOBAL的系统变量，之后每当有客户端连接服务器时，服务器都会单独为该客户端分配一个名为default_storage_engine，作用范围为SESSION的系统变量，这个作用范围为SESSION的系统变量值按照当前作用范围为GLOBAL的同名系统变量值初始化而来。</p>
+</li>
+<li><p>查看系统变量</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SHOW VARIABLES [LIKE 匹配模式]</span><br><span class="line">SHOW [GLOBAL|SESSION] VARIABLES [LIKE 匹配模式]</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>设置方式</p>
+</li>
+</ol>
+<ul>
+<li>启动项设置</li>
+<li>服务器程序运行时设置  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SET [GLOBAL|SESSION] 系统变量名 = 值。</span><br><span class="line">SET [@@(GLOBAL|SESSION).]系统变量名 = 值。</span><br></pre></td></tr></table></figure>
+  eg.<br>  设置全局系统变量名<br>  SET GLOBAL default_storage_engine&#x3D;InnoDB<br>  SET @@GLOBAL.default_storage_engine&#x3D;InnoDB<br>  设置会话系统变量名<br>  SET SESSION default_storage_engine&#x3D;InnoDB<br>  SET @@SESSION.default_storage_engine&#x3D;InnoDB<br>  SET default_storage_engine&#x3D;InnoDB # 由此可见默认的作用范围是SESSION</li>
+</ul>
+<h1 id="状态变量"><a href="#状态变量" class="headerlink" title="状态变量"></a>状态变量</h1><p>MySQL服务器程序中维护了关于程序运行状态的变量，称为状态变量。比如Threads_connected等，由于状态变量是用来显示服务器程序运行状态的，所以他们的值只能由服务器程序自己设置，不能认为设置。与系统变量类似，状态变量也有GLOBAL和SESSION之分。<br>查看状态变量</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SHOW [GLOBAL|SESSION] STATUS [LIKE 匹配模式]</span><br></pre></td></tr></table></figure>
+<p>如果不加修饰符，默认作用范围为SESSION</p>
+<h1 id="字符集和比较规则"><a href="#字符集和比较规则" class="headerlink" title="字符集和比较规则"></a>字符集和比较规则</h1><h2 id="查看和比较规则"><a href="#查看和比较规则" class="headerlink" title="查看和比较规则"></a>查看和比较规则</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SHOW [CHARACTER SET|CHARSET] [LIKE 匹配规则] #字符集的查看</span><br><span class="line">SHOW COLLATION [LIKE 匹配规则] #比较规则的查看</span><br></pre></td></tr></table></figure>
+<p><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%AF%94%E8%BE%83%E8%A7%84%E5%88%99%E5%90%8D%E7%A7%B0%E5%90%8E%E7%BC%80%E8%8B%B1%E6%96%87%E9%87%8A%E4%B9%89%E5%8F%8A%E6%8F%8F%E8%BF%B0.png" alt="比较规则名称后缀英文释义及描述"></p>
+<h2 id="MySQL的字符集与比较规则"><a href="#MySQL的字符集与比较规则" class="headerlink" title="MySQL的字符集与比较规则"></a>MySQL的字符集与比较规则</h2><p>每种字符集对应着若干比较规则。且每种字符集都有一种默认的比较规则<br>MySQL有4种级别的字符集和比较规则：</p>
+<ol>
+<li>服务器级别<br>character_set_server：表示服务器级别的字符集<br>collation_server:表示服务器级别的字符集</li>
+<li>数据库级别<br>character_set_database: 表示数据库级别的字符集<br>collation_database: 表示数据库级别的字符集</li>
+<li>表级别 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># 创建时指定字符集和比较规则</span><br><span class="line">CREATE TABLE 表名 (</span><br><span class="line">    列的信息</span><br><span class="line">) [[DEFAULT] CHARACTER SET 字符集名称][COLLATION 比较规则名称]</span><br><span class="line"></span><br><span class="line"># 修改时指定字符集和比较规则</span><br><span class="line">ALTER TABLE 表名 [[DEFAULT] CHARACTER SET 字符集名称][COLLATION 比较规则]</span><br></pre></td></tr></table></figure></li>
+<li>列级别 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># 创建时指定字符集和比较规则</span><br><span class="line">CREATE TABLE 表名 (</span><br><span class="line">    列名 字符串类型 [CHARACTER SET 字符集名称][COLLATION 比较规则]</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"># 修改时指定字符集和比较规则</span><br><span class="line">ALTER TABLE 表名 MODIFY 列名 字符串类型 [CHARACTER SET 字符集名称][COLLATION 比较规则]</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>如果查到的字符是乱码，可以查看<strong>字符集</strong><br>如果ORDER BY 列名 排序的结果不是自己想要的，可以查看<strong>比较规则</strong></p>
+<p><strong>小结</strong></p>
+<ul>
+<li>只修改字符集，则比较规则变为修改后字符集的默认比较规则</li>
+<li>只修改规则，则字符集将变为修改后的比较规则对应的字符集</li>
+<li>如果创建列时没有显示的指定字符集和比较规则，默认使用表的字符集和比较规则</li>
+<li>如果创建表时没有显示的指定字符集和比较规则，默认使用数据库的字符集和比较规则</li>
+<li>如果创建数据库时没有显示的指定字符集和比较规则，默认使用数据MySQL服务器程序的字符集和比较规则</li>
+</ul>
+<h2 id="客户端与服务器通信过程中使用的字符集"><a href="#客户端与服务器通信过程中使用的字符集" class="headerlink" title="客户端与服务器通信过程中使用的字符集"></a>客户端与服务器通信过程中使用的字符集</h2><p><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/client%E4%B8%8Eserver%E9%80%9A%E4%BF%A1%E8%BF%87%E7%A8%8B%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84%E5%AD%97%E7%AC%A6%E9%9B%86.png" alt="client与server通信过程中使用的字符集"></p>
+<p><strong>补充说明</strong></p>
+<ul>
+<li>1中默认是以操作系统的字符集对请求的字符串编码，在windows中如果指定default-character-set启动项，则以该启动项对请求编码，如果客户端不支持操作系统的字符集则按照mysql默认的字符集编码</li>
+<li><font color="red">3-4在书中没看懂啊。。。</font></li>
+<li>character_set_client、character_set_connection、character_set_results均是session级别的，针对每个客户端的连接，服务器都会为该连接维护这三个变量</li>
+</ul>
+<h1 id="InnoDB存储结构"><a href="#InnoDB存储结构" class="headerlink" title="InnoDB存储结构"></a>InnoDB存储结构</h1><h2 id="InnoDB页"><a href="#InnoDB页" class="headerlink" title="InnoDB页"></a>InnoDB页</h2><p>内存与磁盘的读写速度差了几个数量级，因此InnoDB采取的方式是将数据分为若干个页，以页为单位进行读取，页的大小一般为16KB，一次最少从磁盘上读取16KB的内容到内存，一次最少把内存中的16KB内容刷到磁盘上。</p>
+<p>系统变量innodb_page_size表明了InnoDB存储引擎的也大小，默认值为16384(16KB)。该变量只能在第一次初始化MySQL数据目录时指定，之后就不能更改了，通过命令mysqld –initialize来初始化数据目录。</p>
+<h2 id="InnoDB行结构"><a href="#InnoDB行结构" class="headerlink" title="InnoDB行结构"></a>InnoDB行结构</h2><p>有4中行格式：Compact、Redundant、Dynamic和Comprssed行格式</p>
+<h3 id="指定行结构语法"><a href="#指定行结构语法" class="headerlink" title="指定行结构语法"></a>指定行结构语法</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE 表名 (列的信息) ROW_FORMAT=行格式名称</span><br><span class="line">ALTER TABLE 表名 ROW_FORMAT=行格式名称</span><br></pre></td></tr></table></figure>
+<h3 id="COMPACT行格式"><a href="#COMPACT行格式" class="headerlink" title="COMPACT行格式"></a>COMPACT行格式</h3><p><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/Compact%E7%9A%84%E8%A1%8C%E6%A0%BC%E5%BC%8F%E5%9B%BE.png" alt="Compact的行格式图"></p>
+<ul>
+<li><p><strong>变长字段列表</strong><br>MySQL支持一些变长的数据类型，例如varchar,varbinary等，这些字段称为变长字段。这些变长字段存储的长度不是固定的，所以MySQL在存储时需要把这些字段存起来。也就是说变长字段存储的空间分为2部分，一部分是真实数据存储在记录的真实数据中，一部分是该数据的占用的字节数，存储在记录的额外信息的变长字段长度列表中。所有变长字段的真实数据所占用的字节数按照<font color="red">逆序</font>记录在记录的额外信息中从而形成一个可变字段长度列表。例如记录’aaaa’,’bbb’,’cc’,’d’的可变长列表就是01 02 03 04。<br>如何确认是按照1字节还是2字节来表示一个变长字段的真实数据所占用的字节数呢？如果该变长字段允许的最大字节数超过255字节，则根据真实的长度(L)来计算，如果L超过127字节则使用2字节来表示，否则使用1字节</p>
+</li>
+<li><p><strong>NULL值列表</strong><br>首先统计表中允许存储NULL的列有哪些，如果表中没有允许存储NULL的列，那么NULL值列表也就不存在了。否则的话，每个允许存储NULL的列也是按照<font color="red">逆序</font>对应一个比特位，1代表NULL，0代表有值。如果允许存储NULL值的列的个数必须使用整数个字节数表示，例如如果有9个允许存储NULL的列，就需要使用2字节来表示了</p>
+</li>
+<li><p><strong>记录头信息</strong><br>记录头信息由固定的5个字节40个比特位组成，记录头信息的40个比特位也叫做info bit。具体如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">大小(位)</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">预留位 1</td>
+<td align="center">1</td>
+<td align="center">没有使用</td>
+</tr>
+<tr>
+<td align="center">预留位 2</td>
+<td align="center">1</td>
+<td align="center">没有使用</td>
+</tr>
+<tr>
+<td align="center">deleted_flag</td>
+<td align="center">1</td>
+<td align="center">标记该记录是否被删除</td>
+</tr>
+<tr>
+<td align="center">min_rec_flag</td>
+<td align="center">1</td>
+<td align="center">B+数的每层非叶子节点中最小的目录项记录都会添加该标记</td>
+</tr>
+<tr>
+<td align="center">n_owned</td>
+<td align="center">4</td>
+<td align="center">一个页面中的记录会被分成若干个小组，每个小组有一个记录是”带头大哥”,其余的记录都是”小弟”，”带头大哥”记录的n_owned代表该组的所有记录条数，”小弟”的记录的o_owned为0</td>
+</tr>
+<tr>
+<td align="center">heap_no</td>
+<td align="center">13</td>
+<td align="center">表示当前记录在页面堆中的相对位置</td>
+</tr>
+<tr>
+<td align="center">record_type</td>
+<td align="center">3</td>
+<td align="center">表示记录的类型<br>0:普通记录<br>1:B+树非叶子节点的目录项记录<br>2:Infimum记录<br>3:Supremum记录</td>
+</tr>
+<tr>
+<td align="center">next_record</td>
+<td align="center">16</td>
+<td align="center">表示下一条记录的相对位置</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>记录的真实数据<br>  MySQL会为每个记录默认的添加一些列，如下所示：</p>
+<table>
+<thead>
+<tr>
+<th align="center">列名</th>
+<th align="center">是否必须</th>
+<th align="left">占用空间</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">row_id</td>
+<td align="center">否</td>
+<td align="left">6字节</td>
+<td align="center">行ID，唯一标识一条记录</td>
+</tr>
+<tr>
+<td align="center">trx_id</td>
+<td align="center">是</td>
+<td align="left">6字节</td>
+<td align="center">事务ID</td>
+</tr>
+<tr>
+<td align="center">roll_pointer</td>
+<td align="center">是</td>
+<td align="left">7字节</td>
+<td align="center">回滚指针</td>
+</tr>
+</tbody></table>
+<p>  InnoDB的主键生成策略：优先使用用户自定义的主键，如果用户没有定义主键，则选取第一个不允许存储NULL值的UNIQUE键作为主键，如果以上都不满足，则InnoDB会为表添加一个默认的名为row_id的列作为主键。如果有满足的条件，它就不会被添加了。</p>
+</li>
+<li><p>CHAR(M)列的存储格式<br>如果存储的编码集是固定长度的，则其属于可变长字段，否则属于可变长字段</p>
+</li>
+</ul>
+<h3 id="REDUNDANT行格式"><a href="#REDUNDANT行格式" class="headerlink" title="REDUNDANT行格式"></a>REDUNDANT行格式</h3><p><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/Redundant%E7%9A%84%E8%A1%8C%E6%A0%BC%E5%BC%8F%E5%9B%BE.png" alt="Redundant的行格式图"></p>
+<ul>
+<li><strong>字段长度偏移列表</strong><br>把一条记录的所有列(包括隐藏列)的长度信息按照<font color="red">逆序</font>存储到字段长度列表。长度信息是利用2个相邻偏移量的差值来计算各个列值的长度。例如25 24 1A 17 13 0C 06，因为它是按照逆序排放的，所以按照列的长度排列就是06 0C 13 17 1A 24 25,第一列6个字节，第二列0C-06&#x3D;6个字节，第三列13-0C&#x3D;7个字节，第四列17-13&#x3D;4个字节，第五列1A-17&#x3D;3个字节，第六列24-1A&#x3D;10个字节，第七列25-25&#x3D;1个字节</li>
+<li><strong>记录头信息</strong><br>  记录头信息占用6字节，共使用48个比特位<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">大小(位)</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">预留位 1</td>
+<td align="center">1</td>
+<td align="center">没有使用</td>
+</tr>
+<tr>
+<td align="center">预留位 2</td>
+<td align="center">2</td>
+<td align="center">没有使用</td>
+</tr>
+<tr>
+<td align="center">deleted_flag</td>
+<td align="center">1</td>
+<td align="center">标记该记录是否被删除</td>
+</tr>
+<tr>
+<td align="center">min_rec_flag</td>
+<td align="center">1</td>
+<td align="center">B+树的每层非叶子节点中的最小的目录项记录都会添加该标记</td>
+</tr>
+<tr>
+<td align="center">n_owned</td>
+<td align="center">4</td>
+<td align="center">一个页面中的记录会被分成若干个小组，每个小组有一个记录是”带头大哥”,其余的记录都是”小弟”，”带头大哥”记录的n_owned代表该组的所有记录条数，”小弟”的记录的o_owned为0</td>
+</tr>
+<tr>
+<td align="center">heap_no</td>
+<td align="center">13</td>
+<td align="center">表示当前记录在页面堆中的相对位置</td>
+</tr>
+<tr>
+<td align="center">n_field</td>
+<td align="center">10</td>
+<td align="center">表示记录中列的数量</td>
+</tr>
+<tr>
+<td align="center">1byte_offs_flag</td>
+<td align="center">1</td>
+<td align="center">标记字段长度偏移表中每个列对应的偏移量是使用1字节还是2字节表示的</td>
+</tr>
+<tr>
+<td align="center">next_record</td>
+<td align="center">16</td>
+<td align="center">表示下一条记录的相对位置</td>
+</tr>
+</tbody></table>
+  1byte_offs_flag取值表示：1表示1字节存储偏移量，0表示2字节存储偏移量。当记录的真实数据占用的字节数不大于127时，1byte_offs_flag表示1字节；当记录的真实数据占用的字节数大于127(0x7f)，但是不大于32767(0x7fff)时，1byte_offs_flag表示2字节；当记录的真实数据大于32767(0x7fff)，此时记录的一部分已经存放到溢出页了，在本页中只保留前768字节和20字节的溢出页面地址，这种情况下使用2个字节来存储每个列对应的偏移量就够了。</li>
+<li>NULL值处理<br>将列偏移量的第一个比特位作为是否是NULL的依据。该比特位也被称为NULL比特位，如果为1，该列就是NULL，否则就不是NULL。就这是为什么大于127时使用2字节表示一个列对应的偏移量。如果NULL值的列时<font color="red">定长类型</font>，NULL值也将占用记录的真实数据部分例如C3列类型是VARCHAR(10)，1A A4，其对应的偏移量为A4，二进制为1010 0100，1代表NULL值，010 0100转为十进制就是36，1A转为十进制就是26,36-26&#x3D;10；如果NULL值对应的列是<font color="red">变长类型</font>，则不在记录的真实数据部分占用任何存储空间，例如C4的类型为varchar,列的偏移量1A A4 A4,c4对应的偏移量为A4, A4-A4&#x3D;0</li>
+<li>CHAR(M)列的存储格式<br>不管该列使用的字符集是啥，只要使用CHAR(M)类型，该列的真实数据占用的存储空间大小就是该字符集表示一个字符最多需要的字节数和M的乘积，例如CHAR(10),采用的编码是UTF8，则其真实数据占用的字节数就是3*10&#x3D;30个字节<h3 id="溢出列"><a href="#溢出列" class="headerlink" title="溢出列"></a>溢出列</h3><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%BA%A2%E5%87%BA%E5%88%97.png" alt="溢出列"></li>
+</ul>
+<p>在Compact和Redundant行格式中，对于占用存储空间非常多的列，在记录的真实数据处理只会存储该列的一部分数据，而把剩余的数据分散存储在几个其他的页中，然后在记录的真实数据处使用20字节存储这些页的地址，从而可以找到剩余数据所在的页。如果需要使用溢出页存储真实数据的列称为溢出列。</p>
+<p>页空间的使用：</p>
+<ol>
+<li>每个页除了存放记录之外，还要存放一些其他额外的信息，这些信息加起来一共132个字节的空间</li>
+<li>每个记录需要的额外信息是27字节，这27个字节包括2个字节用于存储真实数据的长度，1个字节用于存储列是否是NULL值，5字节大小的头信息，6字节的row_id列，6字节的trx_id列，7字节的roll_pointer列。 </li>
+<li>存放正常记录的页和溢出页是2种不同类型的页面，对于溢出页来说就没有规定溢出页最少存放2个记录了<br><font color="red">MySQL规定一个页中至少存储2行记录</font>。因此如果一个列不发生溢出，就需要满足如下等式：<br>132+2*(27+n) &lt; 16384(16K)</li>
+</ol>
+<h3 id="DYNAMIC行格式和COMPRESSED行格式"><a href="#DYNAMIC行格式和COMPRESSED行格式" class="headerlink" title="DYNAMIC行格式和COMPRESSED行格式"></a>DYNAMIC行格式和COMPRESSED行格式</h3><p>Dynamic行格式和Compressed行格式与Compact行格式很像，只不过在处理溢出列的数据时不同，他们不会在记录的真实数据处存储该溢出列真实数据的前768字节，而是把该列的所有真实数据存储到溢出页中。只在记录的真实数据处存储20字节大小的指向溢出页的地址。Compressed行格式与Dynamic行格式不同的地方在于Compressed行格式会采用压缩算法对页面进行压缩以节省空间。</p>
+<h1 id="InnoDB数据页结构"><a href="#InnoDB数据页结构" class="headerlink" title="InnoDB数据页结构"></a>InnoDB数据页结构</h1><p>定义一个概念：数据页，页中存放表中记录的那种类型的页<br>数据页的默认大小为16KB，可以划分为多个部分，不同部分有不同的功能，每个部分如下：</p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">中文名</th>
+<th align="center">占用空间大小</th>
+<th align="center">简单描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">File Header</td>
+<td align="center">文件头部</td>
+<td align="center">38字节</td>
+<td align="center">页的一些通用信息</td>
+</tr>
+<tr>
+<td align="center">Page Header</td>
+<td align="center">页面头部</td>
+<td align="center">56字节</td>
+<td align="center">数据页专有的一些信息</td>
+</tr>
+<tr>
+<td align="center">InFimum+Supremum</td>
+<td align="center">页面中最小记录和最大记录</td>
+<td align="center">26字节</td>
+<td align="center">两个虚拟的记录</td>
+</tr>
+<tr>
+<td align="center">User Records</td>
+<td align="center">用户记录</td>
+<td align="center">不确定</td>
+<td align="center">用户存储的记录的内容</td>
+</tr>
+<tr>
+<td align="center">Free Space</td>
+<td align="center">空闲空间</td>
+<td align="center">不确定</td>
+<td align="center">页中尚未使用的空间</td>
+</tr>
+<tr>
+<td align="center">Page Directory</td>
+<td align="center">页目录</td>
+<td align="center">不确定</td>
+<td align="center">页中某些记录的相对位置</td>
+</tr>
+<tr>
+<td align="center">File Trailer</td>
+<td align="center">文件尾部</td>
+<td align="center">8字节</td>
+<td align="center">校验页是否完整</td>
+</tr>
+</tbody></table>
+<h2 id="User-Records和Free-Space"><a href="#User-Records和Free-Space" class="headerlink" title="User Records和Free Space"></a>User Records和Free Space</h2><p>用户存储的记录会按照指定的行格式存储到User Records中，每当插入一个记录时，都会从Free Space中申请一个记录大小的空间，并将这个空间划分到User Records中。如果Free Space被划分完毕，说明这个页已经用完了，需要去重新申请一个新的页了。另外各记录在按照行格式存储到User Records中没有空隙的，如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%AE%B0%E5%BD%95%E5%9C%A8%E9%A1%B5%E7%9A%84UserRecords%E7%9A%84%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84.png" alt="记录在页的UserRecords的存储结构"></p>
+<p>从图中可以看出，被删除的记录还是会存在页中的，只是删除标记置位1了，之所以这样做是因为，移除他们之后，还需要在磁盘上重排列，非常消耗性能。所有被删除的记录会组成一个垃圾链表，记录在这个链表中占用的空间叫做可重用空间，如果有新的记录插入到表中，它们可能会覆盖这些记录所占用的可重用空间。</p>
+<p>next_record：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E4%BD%BF%E7%94%A8%E7%AE%AD%E5%A4%B4%E4%BB%A3%E6%9B%BFnext_record%E7%9A%84%E5%80%BC.png" alt="使用箭头代替next_record的值"></p>
+<p>记录按照主键从小到大形成了一个单向链表。Suprememum的next_record的值为0，说明suprememum后面没有记录了。</p>
+<font color="red">
+next_record的值指向记录头信息和真实数据之间的位置：<br>
+这个位置刚刚好向左就是记录头信息，向右就是真实数据，这就是为什么之前可变字段长度列表和NULL值列表中的信息都是逆序的原因。
+</font>
+
+<p>删除第2条记录的操作(单链表删除节点的操作)：</p>
+<ol>
+<li>第2条记录并没有从存储空间移除，而是将其deleted_flag置为1</li>
+<li>将该记录的next_record置为0，意味着没有下一条记录了，将其移除到垃圾链表</li>
+<li>第一条记录的next_record指向第三条记录</li>
+<li>supremum记录的n_owned的值从5变为4</li>
+</ol>
+<h2 id="Finfimum和Supremum"><a href="#Finfimum和Supremum" class="headerlink" title="Finfimum和Supremum"></a>Finfimum和Supremum</h2><p>继续如图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%AE%B0%E5%BD%95%E5%9C%A8%E9%A1%B5%E7%9A%84UserRecords%E7%9A%84%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84.png" alt="记录在页的UserRecords的存储结构"><br>heap_no不为0和1的原因是MySQL自动给页加了2个记录，这2条记录不是用户插入的，所以也叫伪记录或者虚拟记录。这2条记录分别表示页面中的最小记录(Infimum记录)和页面中的最大记录(Supremum记录)。heap_no的值与主键大小有关，主键小的在前面，主键大的在后面。</p>
+<h2 id="Page-Directory"><a href="#Page-Directory" class="headerlink" title="Page Directory"></a>Page Directory</h2><p>根据主键查找页中记录，如上图简单想法是单链表从头一直查到第一个主键比需要查找主键的值大的位置，这种方式性能太差，MySQL是如下操作：</p>
+<ol>
+<li>将所有的正常记录(包括Infimum和Supremum记录，但不包括移除到垃圾链表的记录)划分为几个组</li>
+<li>每个组的最后一条记录相当于带头大哥，该记录的记录头信息中的o_owned的值就表示该组中有几条记录</li>
+<li>每个组的最后一条记录在页面中的地址偏移量单独提出出来，按照顺序存储到靠近页尾的地方，这个地方就是Page Directory，Page Director中的这些地址偏移量称为槽，一个正常的页面大小是16384，因此2个字节可以表示的范围是65535，因此每个槽占用2个字节</li>
+</ol>
+<p>如下图表示记录和Page Director的关系：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%AE%B0%E5%BD%95%E5%92%8CPageDirectory%E7%9A%84%E5%85%B3%E7%B3%BB.png" alt="记录和PageDirectory的关系"></p>
+<p>分组的方式按照如下步骤：</p>
+<ol>
+<li>初试情况，Infimum和Supremum2条记录分为2个组，o_owned的值都为1</li>
+<li>插入一条记录时，从Page Directory中找到对应记录的主键值比待插入记录的主键值大并且差值最小的槽，，然后把该槽的o_owned的值+1，直到该组的记录数为8</li>
+<li>当一个组的数量达到8时，这时在插入一条记录时，会将组中的记录差分成2个组，一个组的记录是4，另一个组的记录数是8，当然拆分的过程会增加一个槽</li>
+</ol>
+<p>假设已有的记录在如下图所示，要查找主键值为6的记录：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E9%A1%B5%E4%B8%AD%E8%AE%B0%E5%BD%95.png" alt="页中记录"></p>
+<ol>
+<li>计算中间槽的位置，(0+4)&#x2F;2 &#x3D; 2，槽2对应的主键值为8，8 &gt;6，令low不变，high &#x3D; 2</li>
+<li>重新计算中间槽的位置，(2+2)&#x2F;2 &#x3D; 1，槽1对应的主键值为4， 4 &lt; 6，所以令low &#x3D; 1， high &#x3D; 1</li>
+<li>high - low &#x3D; 1，所以要找的记录在槽2对应的组中，槽是相邻的，从槽1对应的记录出发，找到下一条记录6</li>
+</ol>
+<p>综上所述：查找记录指定主键值的记录分为2步</p>
+<ol>
+<li>通过2分法查找到对应的槽，然后根据该槽的上一个相邻槽找到该槽的最小记录</li>
+<li>通过步骤1的记录遍历该组的记录</li>
+</ol>
+<h2 id="Page-Header"><a href="#Page-Header" class="headerlink" title="Page Header"></a>Page Header</h2><p>比如数据页中有多少条记录？Free Space的地址偏移量，页目录中有多少个槽，在数据页中定义了一个名为Page Header的部分。它是页结构的第二部分，占用固定的56字节，专门存储各种状态信息。Page Header各个字节的具体用图如下所示：</p>
+<table>
+<thead>
+<tr>
+<th align="center">状态名称</th>
+<th align="center">占用空间大小</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">PAGE_N_DIR_SLOTS</td>
+<td align="center">2字节</td>
+<td align="center">在页目录中的槽数量</td>
+</tr>
+<tr>
+<td align="center">PAGE_HEAP_TOP</td>
+<td align="center">2字节</td>
+<td align="center">还未使用的空间最小地址，从该地址之后就是Free Space</td>
+</tr>
+<tr>
+<td align="center">PAGE_N_HEAP</td>
+<td align="center">2字节</td>
+<td align="center">第1个比特位表示被记录是否为紧凑型的记录，其余15为表示本页含有的记录数(包括Infimum、Supremum和标记为删除的记录数)</td>
+</tr>
+<tr>
+<td align="center">PAGE_FREE</td>
+<td align="center">2字节</td>
+<td align="center">各个被标记为已删除的记录组成的垃圾链表头结点的地址偏移量</td>
+</tr>
+<tr>
+<td align="center">PAGE_GARBAGE</td>
+<td align="center">2字节</td>
+<td align="center">已删除记录占用的字节数</td>
+</tr>
+<tr>
+<td align="center">PAGE_LAST_INSERT</td>
+<td align="center">2字节</td>
+<td align="center">最后插入记录的位置</td>
+</tr>
+<tr>
+<td align="center">PAGE_DIRECTION</td>
+<td align="center">2字节</td>
+<td align="center">记录插入的方向</td>
+</tr>
+<tr>
+<td align="center">PAGE_N_DIRECTION</td>
+<td align="center">2字节</td>
+<td align="center">一个方向连续插入的记录数量</td>
+</tr>
+<tr>
+<td align="center">PAGE_N_RECS</td>
+<td align="center">2字节</td>
+<td align="center">该页中的记录数(不包括Infimum、Supremum和标记为删除的记录)</td>
+</tr>
+<tr>
+<td align="center">PAGE_MAX_TRX_ID</td>
+<td align="center">8字节</td>
+<td align="center">修改当前页的最大事务id，该值仅在二级索引页面中定义</td>
+</tr>
+<tr>
+<td align="center">PAGE_LEVEL</td>
+<td align="center">2字节</td>
+<td align="center">当前页在B+数中所处的层级</td>
+</tr>
+<tr>
+<td align="center">PAGE_INDEX_ID</td>
+<td align="center">8字节</td>
+<td align="center">索引ID，表示当前页属于哪个索引</td>
+</tr>
+<tr>
+<td align="center">PAGE_BTR_SEG_LEAF</td>
+<td align="center">10字节</td>
+<td align="center">B+树叶子节点段的头部信息，仅在B+树的根页面中定义</td>
+</tr>
+<tr>
+<td align="center">PAGE_BTR_SET_TOP</td>
+<td align="center">10字节</td>
+<td align="center">B+树非叶子节点段的头部信息，仅在B+树的根页面中定义</td>
+</tr>
+</tbody></table>
+<ul>
+<li>PAGE_DIRECTION: 加入新插入的一条记录的主键值比上一条记录的主键值大，我们说这条记录的插入方向是右边，否则就是左边，该状态信息表示最后一条记录插入的方向</li>
+<li>PAGE_N_DIRECTION:假设连续几条插入的方式都是一致的，InnoDB会把验证同一个方向的记录数记录下来，用该状态表示，如果最后一条记录的插入方向方式了改变，该状态就会清0重置</li>
+</ul>
+<h2 id="File-Header"><a href="#File-Header" class="headerlink" title="File Header"></a>File Header</h2><p>各个类型页都会以File Header作为页结构的第一部分，它描述了页的一些通用信息，比如页的编号，它的上一个页和下一个页是什么等等。它占用固定的38个字节，各个字节的具体用途如下：</p>
+<table>
+<thead>
+<tr>
+<th align="center">状态名称</th>
+<th align="center">占用空间大小</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">FIL_PAGE_SPACE_OR_CHKSUM</td>
+<td align="center">4字节</td>
+<td align="center">MySQL版本低于4.0.14，其表示本页面所在的表空间id，之后的版本表示页的校验和</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_OFFSET</td>
+<td align="center">4字节</td>
+<td align="center">页号</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_PREV</td>
+<td align="center">4字节</td>
+<td align="center">上一个页的页号</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_NEXT</td>
+<td align="center">4字节</td>
+<td align="center">下一个页的页号</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_LSN</td>
+<td align="center">8字节</td>
+<td align="center">页面被最后修改时对应的LSN(Log Sequence Number，日志序列号)值</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE</td>
+<td align="center">2字节</td>
+<td align="center">该页的类型</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_FILE_FLUSH_LSN</td>
+<td align="center">8字节</td>
+<td align="center">仅在系统表空间的第一个页中定义，代表文件至少被刷新到了对应的LSN值</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_ARCH_LOG_NO_OR_SPACE_ID</td>
+<td align="center">4字节</td>
+<td align="center">页属于哪个表空间</td>
+</tr>
+</tbody></table>
+<p>其中FILE_PAGE_TYPE(其他类型的页)的值如下所示：</p>
+<table>
+<thead>
+<tr>
+<th align="center">类型名称</th>
+<th align="center">十六进制</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">FIL_PAGE_TYPE_ALLOCATED</td>
+<td align="center">0X0000</td>
+<td align="center">最新分配，还未使用</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_UNDO_LOG</td>
+<td align="center">0X0002</td>
+<td align="center">undo日志页</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_INODE</td>
+<td align="center">0X0003</td>
+<td align="center">存储段的信息</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_IBUF_FREE_LIST</td>
+<td align="center">0X0004</td>
+<td align="center">Change Buffer空闲列表</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_IBUF_BITMAP</td>
+<td align="center">0X0005</td>
+<td align="center">Change Buffer的一些属性</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_SYS</td>
+<td align="center">0X0006</td>
+<td align="center">存储一些系统数据</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_TRX_SYS</td>
+<td align="center">0X0007</td>
+<td align="center">事务系统数据</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_FSP_HDR</td>
+<td align="center">0X0008</td>
+<td align="center">表空间头部信息</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_XDES</td>
+<td align="center">0X0009</td>
+<td align="center">存储区的一些属性</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_BLOB</td>
+<td align="center">0X000A</td>
+<td align="center">溢出页</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_INDEX</td>
+<td align="center">0X45BF</td>
+<td align="center">索引页，也就是我们所说的数据页</td>
+</tr>
+</tbody></table>
+<h2 id="File-Trailer"><a href="#File-Trailer" class="headerlink" title="File Trailer"></a>File Trailer</h2><p>如果某个数据页的内存被修改了，在修改后的某个时间刷新到磁盘中，在刷新还没有完成的时候，断电了，File Trailer用于校验一个页是否完整(也就是刷新时只刷新了一部分的尴尬情况)。该部分由8个字节组成，分成2部分</p>
+<ul>
+<li>前4字节代表页的校验和，在刷新前将页面的校验和算出来，因为File Header在页的前面，所以File Header中的校验和会首先刷新到磁盘，当完全写入之后，校验和也会被写到File Trailer，在刷入磁盘。如果页面刷新成功，则页首和页尾的校验和是一致的，如果刷新了一半断电了，那么File Header是修改后的校验和，而File Trailer是修改前的校验和，俩者不同意味着刷新期间发生了错误</li>
+<li>后4字节袋面页面被最后修改时对应的LSN的后4字节，正常情况应该与File Header头部的FIL_PAGE_LSN的后4字节相同，这个部分也是用于校验页的完整性。如果页首和页尾不一致，也是意味着刷新期间发生了错误</li>
+</ul>
+<h1 id="快速查询的索引——B-树"><a href="#快速查询的索引——B-树" class="headerlink" title="快速查询的索引——B+树"></a>快速查询的索引——B+树</h1><p>每个数据页都会为存储在它里面的记录生成一个页目录，在通过主键查询某条记录的时候可以在页目录中使用二分法快速定位到槽，然后在遍历该槽对应分组中的记录即可快速找到指定的记录</p>
+<h2 id="建立索引的语句"><a href="#建立索引的语句" class="headerlink" title="建立索引的语句"></a>建立索引的语句</h2><ol>
+<li><p>第一种</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE 表名 &#123;</span><br><span class="line">    各个列的信息...</span><br><span class="line">    (KEY|INDEX) 索引名 (需要被索引的单个列或多个列)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中key和INDEX是同义词，任选一个即可。</p>
+</li>
+<li><p>第二种</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE 表名 ADD (KEY|INDEX) 索引名 (需要被索引的单个列或多个列)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>删除索引</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ALATER TABLE 表名 DROP (KEY|INDEX) 索引名</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="一个简单的索引方案"><a href="#一个简单的索引方案" class="headerlink" title="一个简单的索引方案"></a>一个简单的索引方案</h2><p>为快速定位记录所在的数据页建立一个别的目录(该目录就是索引)，建立这个目录需要完成2件事：</p>
+<ol>
+<li>下一个数据页中用户记录的主键值必须大于上一个页中用户记录的主键值</li>
+<li>给所有的页建立一个目录项<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E4%B8%BA%E9%A1%B5%E7%BC%96%E5%88%B6%E7%9B%AE%E5%BD%95.png" alt="为页编制目录"><br>当我们想要查找主键值为20的记录在目录项中(因为12&lt;20&lt;209)，对应的页是9，再根据在页中查找记录的方式去页9中定位具体的记录</li>
+</ol>
+<p>这样做有几个问题：</p>
+<ol>
+<li>InnoDB使用页作为管理存储空间的基本单位，也就是最多保证16KB的连续存储空间，如果表中的记录非常多，此时需要非常大的且连续的存储空间才能将所有的目录项都放下。</li>
+<li>时常有对记录有增加改的操作，假设把28页的记录都删除，则目录项2就没有必要了，因此目录项2后面所有的目录项都得向前移动。假设不移动目录项2，而是将其作为冗余放在目录项中，又浪费了存储空间。</li>
+</ol>
+<h2 id="InnoDB的索引方案"><a href="#InnoDB的索引方案" class="headerlink" title="InnoDB的索引方案"></a>InnoDB的索引方案</h2><p>设计师发现目录项其实与用户记录很像，只不过目录项中的2个列时主键和页号而已，所以可以复用用户记录的数据页来存储目录项，为了与用户记录区分，我们把这些用来表示目录项的记录称为目录项记录——根据record_type属性。它的取值代表的意思是：0——普通的用户记录；1——目录项记录；2——Infimum记录；3——Supremum记录</p>
+<p>将目录项放到数据页的效果如下：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E5%B0%86%E7%9B%AE%E5%BD%95%E9%A1%B9%E6%94%BE%E5%88%B0%E6%95%B0%E6%8D%AE%E9%A1%B5%E7%9A%84%E6%95%88%E6%9E%9C.png" alt="将目录项放到数据页的效果"></p>
+<p>注意：</p>
+<ol>
+<li>目录项记录的record_type的值为1，普通用户记录的record_type的值为0</li>
+<li>目录项纪录只有主键值和页的编号俩个列，而普通用户记录的列时用户自定义的，可能包含很多列，另外还有InnoDB自己添加的隐藏列</li>
+<li>目录项纪录的min_rec_flag的属性值为1，普通用户记录的min_rec_flag属性都是0</li>
+</ol>
+<p>以查找主键值为20的记录为例：</p>
+<ol>
+<li>先到存储目录项纪录页(也就是页30)中铜鼓哦二分法快速定位到对应的目录项记录，12&lt;20&lt;209，所以定位到对应的用户记录所在的页就是页9</li>
+<li>再到存储用户记录的页9中根据二分法快速定位到主键值为20的用户记录</li>
+</ol>
+<p>我们可能需要定位存储目录项记录的页，但是这些页在存储空间中也可能不挨着。如果表中的数据很多，则会产生很多存储目录项记录的页，那如何根据主键值快速定位一个存储目录项记录的页呢？为这些存储目录项记录的页再生成一个更高级的目录，就像是一个多级目录一样，大目录里嵌套小目录，小目录里才是实际的数据，各个页的示意图如下：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E7%94%9F%E6%88%90%E6%9B%B4%E9%AB%98%E9%AB%98%E7%BA%A7%E7%9B%AE%E5%BD%95%E9%A1%B9%E8%AE%B0%E5%BD%95%E7%9A%84%E6%95%B0%E6%8D%AE%E9%A1%B5.png" alt="生成更高高级目录项记录的数据页"><br>上图中升级了一个存储更高级目录项记录的页33。这个页中的两条记录分别代表页30和页32。</p>
+<p>无论是存放用户记录的数据页还是存放目录项记录的数据页，我们都把它存放到B+树这个数据结构中。我们也将这些数据页成为B+树的节点。从上图中可以看出，真正的用户记录其实都存放在叶子节点。其余用来存放目录项纪录的节点成为非叶子节点或者内节点，其中B+树最上层的节点也成为根节点。</p>
+<h3 id="聚簇索引"><a href="#聚簇索引" class="headerlink" title="聚簇索引"></a>聚簇索引</h3><ol>
+<li>使用记录主键值的大小进行记录和页的排序，这包括三层含义<br> 1.1 页(包括叶子节点和内节点)内的记录按照主键的大小排序排成衣蛾单向链表，业内的记录被划分成若干个组，每个组中主键值最大的记录在页内的偏移量会被当做槽一次存放在页目录中<br> 1.2 各个存放用户记录的页也就是根据页中用户记录的主键大小排除排成一个双向链表。<br> 1.3 存放目录项记录的页分为不同的层级，在同一层级中的页也就是根据页中目录项记录的主键大小顺序排成一个双向链表</li>
+<li>B+树的叶子节点存储的是完整的用户记录。所谓的完整的用户记录，就是指这个记录中存储了所有列的值(包括隐藏列)</li>
+</ol>
+<p>有时候会以别的列例如C2列作为搜索条件该咋办？可以多建几颗B+树。</p>
+<h3 id="二级索引"><a href="#二级索引" class="headerlink" title="二级索引"></a>二级索引</h3><ol>
+<li>使用C2列的大小进行记录和页的排序，这包括三层含义<br> 1.1 页(包括叶子节点和内节点)内的记录是按照C2列的大小顺序排成一个单向链表，页内的记录被划分出若干个组，每个组中C2列值最大的记录在页内的偏移量会被当做槽一次存放在页目录中<br> 1.2 各个存放用户记录的页就是根据页中记录的C2列大小顺序排成一个双向链表<br> 1.3 存放目录项记录的页分为不同层级，在同一层级中的页就是根据页中目录项记录的C2列大小顺序排成一个双向链表</li>
+<li>B+树的叶子节点存储的并不是完整的用户记录，而只是C2列+主键这两个列的值。</li>
+<li>目录项纪录中不再是主键+页号的搭配，而变成了C2列+页号的搭配。</li>
+</ol>
+<p>假设想查找满足C2 &#x3D; 4的记录，就可以使用刚刚建好的这颗B+树，因为C2列并没有唯一属性，因此满足搜索条件的记录可能有多个，只需要在该B+树叶子节点定位到第一条满足搜索条件C2&#x3D;4的那条记录，然后沿着由记录组成的单向链表一直向后扫描即可。另外，各个叶子节点组成了双向链表，搜索完了本页面的记录后可以很顺利的跳到下一个页面的第一条记录。然后沿着记录组成的单向链表继续向后搜索，查找过程如下：</p>
+<ol>
+<li>确定第一条符合C2&#x3D;4条件的目录项记录所在页</li>
+<li>通过第一条符合C2&#x3D;4条件的目录相机所在的页确定第一条符合C2&#x3D;4条件的用户记录所在的页</li>
+<li>在真正存储第一条符合C2&#x3D;4条件的用户记录的页中定位到具体的记录</li>
+<li>这个B+树的叶子节点中的记录只存储了C2和C1(也就是主键)两个列。在这个B+树的叶子节点处定位到第一条符合条件的那条用户记录之后，需要根据该记录中的主键信息到聚簇索引中查找到完成的记录，这个通过携带主键信息到聚簇索引重新定位完整的用户记录的过程也成为回表。然后在回到符合条件的叶子节点处继续向后搜索查找所有符合条件的记录。</li>
+</ol>
+<h3 id="联合索引"><a href="#联合索引" class="headerlink" title="联合索引"></a>联合索引</h3><p>我们也可以同时以多个列的大小作为排除的规则，也就是同时为多个列建立索引。例如我们想让B+树按照C2和C3的大小进行排序，这里面包含2层含义：</p>
+<ol>
+<li>先把各个记录和页按照C2列进行排序</li>
+<li>在记录的C2列相同的情况下，在采用C3列进行排序<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E8%81%94%E5%90%88%E7%B4%A2%E5%BC%95%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="联合索引示意图"><br>注意：</li>
+<li>每条目录项记录都有C2列、C3列、页号组成。格条记录先按照C2列的值进行排序，如果记录的C2列相同，则按照C3列的值进行排序</li>
+<li>B+树叶子节点处的用户记录有C2列、C3列和主键C1列组成</li>
+</ol>
+<p>以C2和C3列的大小排序规则建立的B+树称为联合索引，也称为复合索引或多列索引。它本质上是一个二级索引，它的索引包括C2和C3，<font color="red">以C2和C3列的大小为排序规则建立联合索引</font>和<font color="red">分别以C2和C3列建立索引</font>的表述是不同的。不同点如下：</p>
+<ol>
+<li>建立联合索引只会建立如上图一颗B+树</li>
+<li>为C2和C3列分别建立索引时，则会分别以C2和C3列的大小为排序规则建立两颗B+树</li>
+</ol>
+<h3 id="InnoDB中B-树索引的注意事项"><a href="#InnoDB中B-树索引的注意事项" class="headerlink" title="InnoDB中B+树索引的注意事项"></a>InnoDB中B+树索引的注意事项</h3><ol>
+<li>根页面万年不动</li>
+<li>内节点中目录项记录的唯一性：为了让新插入的记录能找到自己在哪个页中，就需要保证B+树同一层内节点的目录项纪录除页号这个字段以外是唯一的。所以二级索引的内节点的目录项记录的内容实际上是由3部分构成的1. 索引列的值；2. 主键的值；3. 页号。</li>
+<li>一个页面至少容纳2条记录：如果一个大的目录中只存放一个子目录会导致目录层级非常多，到最后只存放一条真正的记录，所以一个页面至少容纳2条记录是为了防止B+树的层级增长的过高</li>
+</ol>
+<h2 id="MyISAM的索引方案"><a href="#MyISAM的索引方案" class="headerlink" title="MyISAM的索引方案"></a>MyISAM的索引方案</h2><p>MyISAM的索引方案虽然也使用树形结构，但是却将索引和数据分开存储。，将表中的记录按照记录的插入顺序单独存储在一个文件中(称之为数据文件)。这个文件并不划分为若干个数据页，有多少条记录就往这个文件中塞多少条记录，这样一来就可以通过行号快速访问到一条记录。MyISAM记录也需要记录头信息来存储一些额外的数据，下图所示为一张表的记录如何在存储空间中表示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E4%BD%BF%E7%94%A8MyISAM%E4%BD%9C%E4%B8%BA%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E%E5%9C%A8%E5%AD%98%E5%82%A8%E7%A9%BA%E9%97%B4%E4%B8%AD%E7%9A%84%E8%A1%A8%E7%A4%BA.png" alt="使用MyISAM作为存储引擎在存储空间中的表示"><br>由于在插入数据时并没有可以按照主键大小排序，所以我们不能再这些数据上使用二分法进行查找。</p>
+<ul>
+<li>使用MyISAM存储引擎会把索引信息单独存储到另外一个文件中(称之为索引文件)。MyISAM会为表的主键单独创建一个索引，只不过在索引的叶子节点中存储的不是完成的用户记录，而是主键值与行号的组合，也就是先通过索引找到对应的行号，再通过行号去找对应的记录。(InnoDB存储引擎中，根据主键值对聚簇索引进行一次查找就能找到对应的记录，在MyISAM却需要进行一次回表操作)</li>
+<li>如果有必要，也可以为其他列分别建立索引或者建立联合索引，其原理与InnoDB中的索引差不多，只不过在叶子节点处存储的是相应的列+行号。这些索引也全部是二级索引。</li>
+</ul>
+<h1 id="数据的家——MySQL的数据目录"><a href="#数据的家——MySQL的数据目录" class="headerlink" title="数据的家——MySQL的数据目录"></a>数据的家——MySQL的数据目录</h1><h2 id="数据目录"><a href="#数据目录" class="headerlink" title="数据目录"></a>数据目录</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SHOW VARIABLES LIKE &#x27;datadir&#x27;</span><br></pre></td></tr></table></figure>
+
+<h2 id="数据库在文件系统中的表示"><a href="#数据库在文件系统中的表示" class="headerlink" title="数据库在文件系统中的表示"></a>数据库在文件系统中的表示</h2><p>每当使用’CREATE DATABASE 数据库名’创建一个数据库时，每个数据库都对应数据目录下的一个子目录。当我们创建一个数据库时，MySQL会帮我们做两件事：</p>
+<ol>
+<li>在数据目录下创建一个与数据库同名的子目录(或者说文件夹)</li>
+<li>在与该数据库名同名的子目录下创建一个名为db.opt的文件。这个文件中包含了该数据库的一些属性，比如该数据库的字符集和比较规则。</li>
+</ol>
+<p><font color="red">information_schema比较特殊，没有在数据目录下为其创建子目录</font></p>
+<h2 id="表在文件系统中的表示"><a href="#表在文件系统中的表示" class="headerlink" title="表在文件系统中的表示"></a>表在文件系统中的表示</h2><p>我们的数据都是以记录的形式插入到表中的，表的信息可以表示为两种：</p>
+<ol>
+<li>表结构的定义</li>
+<li>表中的数据</li>
+</ol>
+<p>表结构的定义指的是该表的名称是啥，表里面有多少列，每个列的数据类型是啥，有啥约束条件和索引，用的是啥字符集和比较规则等各种信息。为了保存这些信息，InnoDB和MyISAM这俩种存储引擎都在数据目录下对应的数据库子目录中创建了一个专门用于描述表结构的文件，文件名是<font color="red">表名.frm</font></p>
+<p>表中的数据存储不同的存储引擎有不同的处理方式：</p>
+<h3 id="InnoDB"><a href="#InnoDB" class="headerlink" title="InnoDB"></a>InnoDB</h3><p>InnoDB使用页为基本单位管理存储空间的，默认的页的大小为16KB。每个索引对应着B+树，该B+树的每个节点是一个数据页，数据页之间不一定是连续的。InnoDB的聚簇索引的叶子节点存储了完整的用户记录，也就是所谓的“索引即数据，数据即索引”。<br>为了更好的管理这些页，MySQL提出了表空间或者文件空间的概念。这个表空间是一个抽象的概念，他可以对应文件系统上一个或多个真实的文件(不同表空间对应的文件数量可以不一样)，每一个表空间可以被划分为很多个页，表数据就存放在某个表空间下的某些页中。InnoDB将表空间划分成了几种不同的类型</p>
+<ol>
+<li>系统表空间：默认情况下，InnoDB会在数据目录下创建一个命难为ibdata1，大小为12MB的文件，这个文件就是对应系统表空间在文件系统上的表示。也可以通过在mysql的配置文件中配置对应的文件名称、路径以及大小，例如：<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[server]</span><br><span class="line">innodb_data_file_path=data1:512M;data2:512M:autoextend</span><br></pre></td></tr></table></figure>
+其中，autoextend表明如果这2个文件不够用，会自动扩展data2文件的大小，<font color="red">在一个MySQL中，系统表空间只有一份</font></li>
+<li>独立表空间：在5.6版本之后，系统不在把各个表的数据存储到系统表空间，而是为每一个表建立一个独立表空间。在使用独立表空间存储表数据时，会在该表属于数据库对应的子目录下创建一个表示该独立表空间的文件，<font color="red">文件名是表名.ibd</font>。值得注意的是：我们也可以自己指定使用系统表空间还是独立表空间来存储数据，这个功能由启动选项innodb_file_per_table控制，如果值为0，表示使用系统表空间，如果值为1，表示使用独立表空间。不过innodb_file_per_table只对新建的表起作用。想把已经存储到系统表空间的表转移到独立表空间，语法：ALTER TABLE 表名 TABLESPACE [&#x3D;] innodb_file_per_table；想把已经存储到独立表空间的表转移到系统表空间，语法：ALTER TABLE TABLESPACE [&#x3D;] innodb_system。中括号中的”&#x3D;”号可以可无</li>
+<li>其他类型的表空间<br>除了上述2种表空间之外，还有一些不同类型的表空间，比如通用表空间，undo表空间，临时表空间等。。。</li>
+</ol>
+<h3 id="MyISAM"><a href="#MyISAM" class="headerlink" title="MyISAM"></a>MyISAM</h3><p>MyISAM中的索引相当于全部都是二级索引，数据和索引是分开存储的。所以文件系统中也是使用不同的文件来存储数据文件和索引文件。与InnoDB不同的点是MyISAM并没有表空间一说，表的数据和索引都存放到对应的数据库子目录下。假设有一个数据库，在其中创建一个test的表，该数据库对应的子目录下有以下三个文件：test.frm;test.MYD;test.MYI。其中test.MYD表示表的数据文件，也就是插入的用户记录；test.MYI表示表的索引文件。</p>
+<h2 id="其他的文件"><a href="#其他的文件" class="headerlink" title="其他的文件"></a>其他的文件</h2><p>除了上面说的用户自己存储的数据外，数据目录下还包含了一些确保程序更好运行的额外文件，主要包括下面几种类型：</p>
+<ol>
+<li>服务器进程文件：每运行一个MySQL服务器程序，都意味着启动一个进程，MySQL都会把自己的进程ID写入这个文件中</li>
+<li>服务器日志文件：在服务器运行期间，会产生各种各样的日志，比如常规的查询日志，错误日志，二进制日志，redo日志等。</li>
+<li>SSL和RSA证书与密钥文件：主要是为了客户端与服务器安全通信而创建的一些文件。</li>
+</ol>
+<h2 id="文件系统对数据库的影响"><a href="#文件系统对数据库的影响" class="headerlink" title="文件系统对数据库的影响"></a>文件系统对数据库的影响</h2><p>因为MySQL的数据都是存储在文件系统中，因此会受到一些文件系统的制约，主要体现在一下几类方面：</p>
+<ol>
+<li>数据库名称不能超过文件系统所允许的最大长度。</li>
+<li>特殊字符的问题：为了避免因为数据库名和表名出现某些特殊字符而造成文件系统不支持的情况，MySQL会把数据库名和表名中所有除数字和拉丁字母意外的任何字符在文件名中都映射成@+编码值的形式，并将其作为文件名</li>
+<li>文件长度受文件系统最大长度的限制。</li>
+</ol>
+<h2 id="MySQL系统数据库的简介"><a href="#MySQL系统数据库的简介" class="headerlink" title="MySQL系统数据库的简介"></a>MySQL系统数据库的简介</h2><ul>
+<li>mysql：存储了MySQL的用户账户和权限的信息、一些存储过程和事件的定义信息、一些运行过程中产生的日志信息、一些帮助以及失去信息等。</li>
+<li>information_schema: 存储了MySQL服务器维护的所有其他数据库的信息，比如哪些表、哪些视图、哪些触发器、哪些列、哪些索引等，这些信息不是真实的用户数据，而是一些描述信息，有时候也称之为元数据。</li>
+<li>performance_schema: 存储了服务器运行过程中的一些状态信息，算是对MySQL服务器的一个性能监控。它包含的信息有统计最近执行了哪些语句，在执行过程中的每个阶段都花费了多长时间，内存的使用情况等。</li>
+<li>sys: 这个数据库主要是通过视图的形式把information_schema和performance_schema结合起来，让开发人员更方便的了解MySQL服务器的性能信息。</li>
+</ul>
+<h1 id="存放页面的大池子"><a href="#存放页面的大池子" class="headerlink" title="存放页面的大池子"></a>存放页面的大池子</h1><p>表空间是一个抽象的概念：对于系统表空间来说，对应着文件系统中一个或多个实际文件；对于每个独立表空间来说，对应着一个名为”表名.ibd”的实际文件。</p>
+<table>
+<thead>
+<tr>
+<th align="center">类型名称</th>
+<th align="center">16进制</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">FIL_PAGE_TYPE_ALLOCATED</td>
+<td align="center">0x0000</td>
+<td align="center">最新分配，还未使用</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_UNDO_LOG</td>
+<td align="center">0x0002</td>
+<td align="center">undo日志页</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_INODE</td>
+<td align="center">0x0003</td>
+<td align="center">存储段的信息</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_IBUF_FREE_LIST</td>
+<td align="center">0x0004</td>
+<td align="center">Change Buffer空闲列表</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_IBUF_BITMAP</td>
+<td align="center">0x0005</td>
+<td align="center">Change Buffer的一些属性</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_SYS</td>
+<td align="center">0x0006</td>
+<td align="center">存储一些系统数据</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_TRX_SYS</td>
+<td align="center">0x0007</td>
+<td align="center">事务系统数据</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_FSP_HDR</td>
+<td align="center">0x0008</td>
+<td align="center">表空间头部信息</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_XDES</td>
+<td align="center">0x0009</td>
+<td align="center">存储区的一些属性</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_TYPE_BLOB</td>
+<td align="center">0x000a</td>
+<td align="center">溢出页</td>
+</tr>
+<tr>
+<td align="center">FIL_PAGE_INDEX</td>
+<td align="center">0x45BF</td>
+<td align="center">索引页，也就是我们所说的数据页</td>
+</tr>
+</tbody></table>
+<p>所有页的类型都会包含2个部分：</p>
+<ol>
+<li>file header：记录页面的一些通用信息</li>
+<li>file trailer： 校验页是否完整，保证页面从内存刷新到磁盘后内容是相同的</li>
+</ol>
+<p>在file header中需要注意的是：</p>
+<ul>
+<li>表空间中的每一个页都对应着一个页号，也就是FIL_PAGE_OFFSET，可以通过这个页号在表空间快速定位到指定的页面，这个页号由4字节组成，也就是32位，，所以一个表空间最多可以拥有2^32个页，每个页的默认大小为16KB，即一个表空间最多支持64TB的数据。</li>
+<li>某些类型的页可以组成链表，链表中相邻的两个页面的页号可以不连续，即它们可以不按照在表空间中的物理位置相邻存储，而是根据FIL_PAGE_PREV和FIL_PAGE_NEXT来存储上一个页和下一个页的页号。需要注意的是一般是INDEX类型的页面使用这两个字段，其他的页面类型不使用这两个字段。</li>
+<li>每个页的类型由FIL_PAGE_TYPE表示。具体的在上表中。</li>
+</ul>
+<h2 id="独立表空间结构"><a href="#独立表空间结构" class="headerlink" title="独立表空间结构"></a>独立表空间结构</h2><h3 id="区的概念"><a href="#区的概念" class="headerlink" title="区的概念"></a>区的概念</h3><p>对于16KB的页来说，连续的64个页就是一个区，也就是说一个区默认占用1MB空间大小。无论是系统表空间还是独立表空间，都可以看成是由若干个连续的区组成的，每256个区被划分成一组，如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E6%AF%8F%E4%B8%AA%E7%BB%84%E7%9A%84%E9%A1%B5%E9%9D%A2%E7%B1%BB%E5%9E%8B.png" alt="每个组的页面类型"><br>从图中可以看出：</p>
+<ol>
+<li>第一个组的最开始的3个页面的类型都是固定的。<ul>
+<li>FSP_HDR: 这个类型的页面用来登记整个表空间的一些整体属性以及本组所有的区的属性，需要注意的是，整个表空间只有一个FSP_HDR类型的页面</li>
+<li>IBUF_BITMAP: 这个类型的页面用来存储关于Change Buffer的一些信息。</li>
+<li>INODE: 这个类型的页面存储了许多成为INODE Entry的数据结构。</li>
+</ul>
+</li>
+<li>其余各组最开始的2个页面的类型是固定的<ul>
+<li>XDES: 全称是extent descriptor，用来登记本组256个区的属性。FSP_HDR与XDES类型的页面相似，只是FSP_HDR还会额外存储一些表空间的属性</li>
+<li>IBUF_BITMAP: 这个类型的页面用来存储关于Change buffer的一些信息。</li>
+</ul>
+</li>
+</ol>
+<p>总的来说每个区由64个页组成、每256个区组成一组、每个组的开始的几个页面的类型是固定的。</p>
+<h3 id="段的概念"><a href="#段的概念" class="headerlink" title="段的概念"></a>段的概念</h3><p>不引入区的概念，只使用页的概念对存储引擎的运行并没有影响，但是如果考虑到这样一个场景：向表中插入一条记录，实际上就是向该表的聚簇索引和二级索引代表的B+树的节点插入数据。而B+树每一层中的页都会形成一个双向链表，如果以页为单位来分配存储空间，双向链表相邻的两个页之间的物理位置可能离的非常远，对于传统机械硬盘来说，需要重新定位磁头的位置，也就是会产生随机I&#x2F;O，这样影响磁盘的性能。所以应该尽量让页面链表相邻的页的物理位置页相邻，这样在扫描叶子节点中大量记录的时才可以使用顺序I&#x2F;O。(不连续也可以，无非就是性能差一点)</p>
+<p>因此引入了区的概念，一个区就是物理位置上连续的64个页，且区里的页号也都是连续的，在表中的数据量很大时，为某个索引分配空间的时候就不再按照页为单位进行分配，而是直接按照区来分配。虽然会造成存储空间的浪费，但是性能提升了很多。</p>
+<p>如果执行查询时扫描叶子结点的记录而不区分叶子节点和非叶子节点，统统把节点代表的页申请到区中，扫描效果还是会打折扣，因此对B+树的叶子节点和非叶子节点进行了区别的对待即叶子节点和非叶子节点都有各自独立的区。存放叶子节点的区就算是一个段，而存放非叶子节点的区是另外一个段。一个索引会产生2个段：一个叶子节点段和一个非叶子节点段</p>
+<p>在考虑这样一个场景：默认情况下一个只存放了几条记录的小表也需要申请2MB(段以区为单位申请，每个区默认大小为1MB，一个叶子节点段，一个飞叶子节点段)？这个问题在于一个区被整个分配给某个段(区中的所有页面都是为了存储同一个段的数据，即使段的数据填不满区中所有的页面，剩下的页面也不能挪作他用)。引入一个碎片区的概念：在一个碎片区中，并不是所有的页都是为了存储同一个段的数据而存在的，碎片区中的页可以用作不同的目的，比如有些页属于段A，有些页属于段B，有些页不属于任何段。碎片区直属于表空间，因此为某个段分配存储空间的策略如下：</p>
+<ol>
+<li>刚开始向表中插入数据时，段是从某个碎片区以单个页面为单位来分配存储空间</li>
+<li>当某个段已经占用了32个碎片区页面之后，就会以完整的区为单位来分配存储空间(原先占用的碎片区页面并不会被废止到新申请的完整的区中)</li>
+</ol>
+<p>段不仅能定义某些区的集合，更精确的来说：应该是某些零散的页面以及一些完整区的集合。除了索引的叶子节点和非叶子节点的段之外，InnoDB中还有为存储一些特殊的数据而定义的段，比如回滚段</p>
+<h2 id="区的分类"><a href="#区的分类" class="headerlink" title="区的分类"></a>区的分类</h2><p>表空间是由若干个区组成，这些区大致分为4中类型：</p>
+<ul>
+<li>空闲的区： 现在还没有用到这个区中的任何页面</li>
+<li>有剩余空闲页面的碎片区： 表示碎片区中还有可被分配的空闲页面</li>
+<li>没有升级空闲页面的碎片区： 表示碎片区中的所有页面都被分配使用，没有空闲页面</li>
+<li>附属于某个段的区： 每一个索引都可以分为叶子页面和非叶子节点段。除此之外，InnoDB还会定义一些特殊用途的段。当这些段中的数据量很大时，将使用区作为基本的分配单位，这些区中的页面完全用于存储该段中的数据</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="center">状态名</th>
+<th align="center">含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">FREE</td>
+<td align="center">空闲的区</td>
+</tr>
+<tr>
+<td align="center">FREE_FRAG</td>
+<td align="center">有剩余空闲页面的碎片区</td>
+</tr>
+<tr>
+<td align="center">FULL_FRAG</td>
+<td align="center">没有剩余空闲页面的碎片区</td>
+</tr>
+<tr>
+<td align="center">FSEG</td>
+<td align="center">附属于某个段的区</td>
+</tr>
+<tr>
+<td align="center">值得一提的是FREE、FREE_FRAG、FULL_FRAG直属于表空间，而FSET附属于某个段。有一个数据结构XDES Entry(Extent Descriptor Entry)可以方便的管理这些区，每个区都对应着一个XDES Entry的结构这个结构记录了对应的区的一些属性。</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center"><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/XDES_Entry%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="XDES_Entry结构示意图"></td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<ul>
+<li>Segment ID: 每个段都有一个独立的编号，用ID表示。Segment ID字段表示的就是该区所在的段，前提是该区已经被分配给某个段了，不然没有意义</li>
+<li>ListNode： 这个部分可以将若干个XDES Entry结构串成一个链表。</li>
+<li>State: 这个字段表明区的状态。可选值为FREE、FREE_FRAG、FULL_FRAG以及FSEG。</li>
+<li>Page State Bitmap: 这个部分共16字节，也就是128位。一个区默认有64个页，因此每2个比特位对应着区中的一个页。这2位中的第一位表示该页是否空闲，第二位暂时没用到。</li>
+</ul>
+<h3 id="XDES-Entry链表"><a href="#XDES-Entry链表" class="headerlink" title="XDES Entry链表"></a>XDES Entry链表</h3><p>向某个段中插入数据申请新页面的过程：当段中的数据较少时，首先会查看表空间中是否有FREE_FRAG的区，如果找到了，那么就从该区中去一个零散的页面插进去；否则到表空间中申请一个FREE的区，把该区的状态变为FREE_FRAG，然后从该新申请的区中去一个零散页把数据插入进去；之后在不同的段使用零散页的时候都从该区中取，知道该区中没有空闲页面，然后该区的状态就变为了FULL_FRAG的状态。</p>
+<p>那么怎么知道哪些区是FREE，哪些区是FREE_FRAG的呢？这就用到了XDES Entry中ListNode结构了：</p>
+<ol>
+<li>通过List Node把状态为FREE的区对应的XDES Entry结构连成一个链表，这个链表成为FREE链表</li>
+<li>通过List Node把状态为FREE_FRAG的区对应的XDES Entry结构连成一个链表，这个链表称为FREE_FRAG链表</li>
+<li>通过List Node把状态为FULL_FRAG的区对应的XDES Entry结构连成一个链表，这个链表称为FULL_FRAG链表</li>
+</ol>
+<p>这样每当想查找一个FREE_FRAG状态的区时，就直接把FREE_FRAG链表的头结点拿出来，从这个节点队对应的区中取一些零散页来插入数据。当这个节点对应的区中没有零散页时，就修改它的State字段的值，并将其从FREE_FRAG链表移入FULL_FRAG链表；同理当FREE_FRAG链表中一个节点都没有，那么就直接从FREE链表中去一个节点移动到FREE_FRAG链表，并修改其State字段的值，然后从这个节点对应的区中取一些零散页。当段中的数据占满32个零散页后，就申请完整的区来插入数据。</p>
+<p>怎么知道哪些区属于哪个段呢？为每个段中的XDES Entry结构建立3个链表：</p>
+<ol>
+<li>FREE链表：同一个段中，所有页面都是空闲页面的区对应的XDES Entry结构会被加入到这个链表中，这与上面的FREE链表不是一回事。</li>
+<li>NOT_FULL链表：同一个段中，仍有空闲页面的区对应的XDES Entry结构会被加入到这个链表中。</li>
+<li>FULL链表：同一个段中，已经没有空闲页面的区对应的XDES Entry结构会被加入到这个链表中。</li>
+</ol>
+<p>每个索引都有2个段，每个段都会维护上述3个链表。</p>
+<h3 id="举例"><a href="#举例" class="headerlink" title="举例"></a>举例</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE t (</span><br><span class="line">    c1 INT NOT NULL,AUTO_INCREMENT,</span><br><span class="line">    c2 VARCHAR(100),</span><br><span class="line">    c3 VARCHAR(100),</span><br><span class="line">    PRIMARY KEY(c1),</span><br><span class="line">    KEY idx_c2(c2)</span><br><span class="line">)ENGINE=InnoDB</span><br></pre></td></tr></table></figure>
+<p>表中共有2个索引，一个聚簇索引和一个二级索引idx_c2。所以这个表共有4个段，每个段都会维护FREE链表、NOT_FULL链表以及FULL链表，总共是12个链表。以及直属于表空间的FREE链表、FREE_FRAG链表以及FULL_FRAG链表，整个独立表空间共需要维护15个链表。</p>
+<h3 id="链表基节点"><a href="#链表基节点" class="headerlink" title="链表基节点"></a>链表基节点</h3><p>如何找到上述的这些链表或者说怎么找到某个链表的头结点呢？有一个名为List Base Node(链表基节点)的结构。这个结构包含了链表的头结点和尾结点的指针以及这个链表中包含了多少个节点的信息，如图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/ListBaseNode.png" alt="ListBaseNode"></p>
+<ul>
+<li>List length: 该链表有多少个节点</li>
+<li>First Node Page Number和First Node Offset：该链表的头结点在表空间的位置</li>
+<li>Last Node Page Number和Last Node Offset: 该链表的尾结点在表空间的位置</li>
+</ul>
+<p>一般将某个链表对应的List Base Node放到表空间的固定位置，这样就可以很容易的定位某个链表了</p>
+<h3 id="链表小结"><a href="#链表小结" class="headerlink" title="链表小结"></a>链表小结</h3><p>表空间是由若干个区组成的，每个区都对应着一个XDES Entry结构。只属于表空间的区对应的XDES Entry结构可以分成FREE、FREE_FRAG和FULL_FRAG链表。每个段可以拥有若干个区，每个段中的区对应的XDES Entry可以构成FREE、NOT_NULL和FULL这三个链表。每个链表都对应着一个List Base Node结构，这个结构中记录了链表头结点、尾结点以及该链表包含结点的个数的信息。</p>
+<h2 id="段的结构"><a href="#段的结构" class="headerlink" title="段的结构"></a>段的结构</h2><p>段不对应表空间某个连续的物理存储空间，而是一个逻辑上的概念，由若干个零散的页面以及一些完整的区组成。像每个区对应着一个XDES Entry结构一样，每个段对应着一个INODE Entry结构。<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/INODE_Entry.png" alt="INODE_Entry"><br>INODE Entry结构中各个部分的含义如下：</p>
+<ul>
+<li>Segment ID: 这个INODE Entry结构对应的段的编号</li>
+<li>NOT_FULL_N_USED: 在NOT_FULL链表中已经使用了多少个页面</li>
+<li>3个List Base Node： 分别为段的FREE、NOT_FULL、FULL链表定义的List Base Node，这样当想查找某个段的某个链表的头结点和尾结点时，可以直接到这个部分找到对应链表的List Base Node。</li>
+<li>Magic Number: 标记INODE Entry是否已经被初始化。如果这个数字的值为97937874，表明该INODE Entry已经被初始化。这个数字没有特殊的含义，仅仅是人为规定</li>
+<li>Fragment Array Entry: 段是一些零散页面和一些完整的区组成，每个Fragment Array Entry对应着一个零散的页面，表示一个零散页面的页号</li>
+</ul>
+<h2 id="各类型页面详细情况"><a href="#各类型页面详细情况" class="headerlink" title="各类型页面详细情况"></a>各类型页面详细情况</h2><h3 id="FSP-HDR类型"><a href="#FSP-HDR类型" class="headerlink" title="FSP_HDR类型"></a>FSP_HDR类型</h3><p>这是第一个组的第一个页面，页号为0，也是表空间的第一个页面，它存储了表空间的一些整体属性以及第一个组内256个区对应的XDES Entry结构，如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/FSP_HDR%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%A1%B5%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="FSP_HDR类型的页结构示意图"></p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">中文名</th>
+<th align="center">占用空间大小</th>
+<th align="center">简单描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">File Header</td>
+<td align="center">文件头部</td>
+<td align="center">38</td>
+<td align="center">页的一些通用信息</td>
+</tr>
+<tr>
+<td align="center">File Space Header</td>
+<td align="center">表空间头部</td>
+<td align="center">112</td>
+<td align="center">表空间的一些整体属性信息</td>
+</tr>
+<tr>
+<td align="center">XDES Entry</td>
+<td align="center">区描述信息</td>
+<td align="center">10240</td>
+<td align="center">存储本组256个区对应的属性信息</td>
+</tr>
+<tr>
+<td align="center">Empty Space</td>
+<td align="center">尚未使用空间</td>
+<td align="center">5986</td>
+<td align="center">用于页结构的填充，没啥实际意义</td>
+</tr>
+<tr>
+<td align="center">File Trailer</td>
+<td align="center">文件尾部</td>
+<td align="center">8</td>
+<td align="center">校验页是否完整</td>
+</tr>
+</tbody></table>
+<h4 id="File-Space-Header"><a href="#File-Space-Header" class="headerlink" title="File Space Header"></a>File Space Header</h4><p><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/File_Space_Header.png" alt="File_Space_Header"></p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">占用空间大小</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">Space ID</td>
+<td align="center">4</td>
+<td align="center">表空间ID</td>
+</tr>
+<tr>
+<td align="center">Not Used</td>
+<td align="center">4</td>
+<td align="center">未被使用，可以忽略</td>
+</tr>
+<tr>
+<td align="center">Size</td>
+<td align="center">4</td>
+<td align="center">当前表空间拥有的页面数</td>
+</tr>
+<tr>
+<td align="center">FREE Limit</td>
+<td align="center">4</td>
+<td align="center">尚未被初始化的最小页号，大于或等于这个页号的区对应的XDES Entry结构都没有被加入到FREE链表</td>
+</tr>
+<tr>
+<td align="center">Space Flags</td>
+<td align="center">4</td>
+<td align="center">表空间的一些占用存储空间比较小的属性</td>
+</tr>
+<tr>
+<td align="center">FRAG_N_USED</td>
+<td align="center">4</td>
+<td align="center">FREE_FRAG链表中已使用的页面数量</td>
+</tr>
+<tr>
+<td align="center">List Base Node for FREE List</td>
+<td align="center">16</td>
+<td align="center">FREE链表的基节点</td>
+</tr>
+<tr>
+<td align="center">List Base Node for FREE_FRAG List</td>
+<td align="center">16</td>
+<td align="center">FREE_FRAG链表的基节点</td>
+</tr>
+<tr>
+<td align="center">List Base Node for FULL_FRAG List</td>
+<td align="center">16</td>
+<td align="center">FULL_FRAG链表的基节点</td>
+</tr>
+<tr>
+<td align="center">Next Unused Segment ID</td>
+<td align="center">8</td>
+<td align="center">当前表空间中下一个未使用的Segment ID</td>
+</tr>
+<tr>
+<td align="center">List Base Node for SEG_INODES_FULL List</td>
+<td align="center">16</td>
+<td align="center">SEG_INODES_FULL链表的基节点</td>
+</tr>
+<tr>
+<td align="center">List Base Node for SEG_INODES_FREE_List</td>
+<td align="center">16</td>
+<td align="center">SEG_INODES_FREE链表的基节点</td>
+</tr>
+</tbody></table>
+<ul>
+<li>List Base Node for FREE List、List Base Node for FREE_FRAG List、List Base Node for FULL_FRAG List: 直属于表空间的FULL、FREE_FRAG、FULL_FRAG链表的基节点，这三个链表的基节点在File Space Header部分中的位置是固定的。</li>
+<li>FRAG_N_USED: 表明在FREE_FRAG链表中已经使用的页面数量</li>
+<li>FREE Limit: 表空间对应着具体的磁盘文件，表空间在最初创建时会有一个默认的大小。且磁盘文件是一个自增长文件，当文件不够用时，会自动增加文件大小。这会带来2个问题：<ol>
+<li>最初创建一个表空间时，可以指定一个非常大的磁盘文件，接着对表空间完成一个初始化的操作：包括为表空间中的区建立对应的XDES Entry结构；为各个段建立对应的INODE Entry结构；建立各个链表等。但是对于非常大的磁盘文件来说，有很多存储空间是空闲的。因此：可以把所有的空闲区加入到FREE链表、也可以把一部分空闲区加入到FREE链表，等FREE链表不够用时，再把空闲的区对应的XDES Entry加入到FREE链表。</li>
+<li>对于自增加的存储文件来说，可能在发生一次自增长时分配的磁盘空间非常大。同样的：可以把新分配的所有的空闲区加入到FREE链表、也可以把一部分空闲区加入到FREE链表，等FREE链表不够用时，再把空闲的区对应的XDES Entry加入到FREE链表(InnoDB采用的是这种)</li>
+</ol>
+</li>
+<li>Next Unused Segment ID: 表中的每个索引对应着2个段，每个段都有一个唯一的ID。当为某个表新建一个索引时，需要新建2个段，该字段表明当前表空间最大的段的ID的下一个ID。</li>
+<li>Space Flags: 表空间中与布尔类型相关的属性，或者只需要几个比特就能搞定的属性。<table>
+<thead>
+<tr>
+<th align="center">标识名称</th>
+<th align="center">占用的空间大小(比特)</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">POST_ANTELOPE</td>
+<td align="center">1</td>
+<td align="center">表示文件格式是否在ANTELOPE格式之后</td>
+</tr>
+<tr>
+<td align="center">ZIP_SSIZE</td>
+<td align="center">4</td>
+<td align="center">表示压缩页面大小</td>
+</tr>
+<tr>
+<td align="center">ATOMIC_BLOBS</td>
+<td align="center">1</td>
+<td align="center">表示是否自动把占用存储空间非常多的字段放到溢出页中</td>
+</tr>
+<tr>
+<td align="center">PAGE_SSIZE</td>
+<td align="center">4</td>
+<td align="center">页面大小</td>
+</tr>
+<tr>
+<td align="center">DATA_DIR</td>
+<td align="center">1</td>
+<td align="center">表示表空间是否是从数据目录中获取的</td>
+</tr>
+<tr>
+<td align="center">SHARED</td>
+<td align="center">1</td>
+<td align="center">是否为共享表空间</td>
+</tr>
+<tr>
+<td align="center">TEMPORARY</td>
+<td align="center">1</td>
+<td align="center">是否为临时表空间</td>
+</tr>
+<tr>
+<td align="center">ENCRYPTION</td>
+<td align="center">1</td>
+<td align="center">表空间是否加密</td>
+</tr>
+<tr>
+<td align="center">UNUSED</td>
+<td align="center">18</td>
+<td align="center">没有使用到的比特位</td>
+</tr>
+</tbody></table>
+</li>
+<li>List Base Node for SET_INODES_FULL list、List Base Node for SET_INODES_FREE List: 每个段对应的INODE Entry结构会存放一个类型为INODE的页中。如果表空间中的段非常多时，则会有多个INODE Entry结构，此时一个页可能放不下，就需要多个INODE类型的页面，这些INODE类型的页面可以构成下面两种链表：<ol>
+<li>SET_INODE_FULL链表: 在该链表中，INODE类型的页面都已经被INODE Entry结构填满，没有空闲空间存放额外的INODE Entry</li>
+<li>SET_INODE_FREE链表: 在该链表中，INODE类型的页面仍然可以存放INODE Entry结构</li>
+</ol>
+</li>
+</ul>
+<h4 id="XDES-Entry"><a href="#XDES-Entry" class="headerlink" title="XDES Entry"></a>XDES Entry</h4><p>没什么好说的了，一个XDES Entry结构的大小为40字节。XDES Entry 0对应着extent 0，XDES Entry 1对应着extent 1…因为每个区对应着的XDES Entry结构的地址都是固定的，因此可以很轻松的访问extent0对应着的XDEX Entry结构(页面偏移量为150字节)，extent 1对应的XDES Entry就是(150 + 40*1)，一次类推…</p>
+<h3 id="XDES类型"><a href="#XDES类型" class="headerlink" title="XDES类型"></a>XDES类型</h3><p>与FSP_HDR类型的页面相比，除了没有File Space Header部分之外(也就是没有一些表空间的整体属性)，区域的部分都是一样的。XDES类型的页结构如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/XDES%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%A1%B5%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="XDES类型的页结构示意图"></p>
+<h3 id="IBUF-BITMAP类型"><a href="#IBUF-BITMAP类型" class="headerlink" title="IBUF_BITMAP类型"></a>IBUF_BITMAP类型</h3><p>这个类型的页中记录了一些Change Buffer的东西。向表中插入一条记录，其本质就是向每个索引对应的B+树中插入记录。该记录首先被插入到聚簇索引页面，然后在插入到每个二级索引页面。这些页面在表空间中随机分布，将会产生大量的随机I&#x2F;O，严重影响性能，对于UPDATE和DELETE来说，也会带来许多随机I&#x2F;O。所以需要引入Change Buffer结构来优化。在修改非唯一二级索引页面时，如果该页面尚未被加载到内存中(磁盘上)，那么该修改将先被暂时缓存到Change Buffer中，之后服务器空闲或者其他什么原因导致对应的页面从磁盘加载到内存时，再将修改合并到对应的页面。<font color="red">如果此时服务器宕机怎么办？</font>在很早的版本时，只会缓存INSERT操作对二级索引页面所做的修改，所以Change Buffer也叫Inser Buffer。</p>
+<h3 id="INODE类型"><a href="#INODE类型" class="headerlink" title="INODE类型"></a>INODE类型</h3><p>每个索引定义了2个段，而且某些特殊功能由特殊的段，为了方便管理这些段，引入了一个INODE Entry的结构，这个结构记录了这个段的相关属性，INODE类型的页就是为了存储INODE Entry结构。INODE类型的页结构如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/INODE%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%A1%B5%E7%BB%93%E6%9E%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png" alt="INODE类型的页结构示意图"></p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">中文名</th>
+<th align="center">占用空间大小(字节)</th>
+<th align="center">简单描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">File Header</td>
+<td align="center">文件头部</td>
+<td align="center">38</td>
+<td align="center">页的一些通用信息</td>
+</tr>
+<tr>
+<td align="center">List Node for INODE Page List</td>
+<td align="center">通用链表节点</td>
+<td align="center">12</td>
+<td align="center">存储上一个INODE页面和下一个INODE页面的指针</td>
+</tr>
+<tr>
+<td align="center">INODE Entry</td>
+<td align="center">段描述信息</td>
+<td align="center">16320</td>
+<td align="center">具体的INODE Entry结构</td>
+</tr>
+<tr>
+<td align="center">Empty Space</td>
+<td align="center">尚未使用空间</td>
+<td align="center">6</td>
+<td align="center">用于页结构的填充，没有啥实际意义</td>
+</tr>
+<tr>
+<td align="center">File Trailer</td>
+<td align="center">文件尾部</td>
+<td align="center">8</td>
+<td align="center">校验页是否完整</td>
+</tr>
+</tbody></table>
+<ul>
+<li>INODE Entry: 该结构的组成：主要包括对应的段内零散页面的地址以及附属于该段的FREE、NOT_FULL和FULL链表的基节点。每个INODE Entry占用192字节，一个页面可以存储85个这样的节点。</li>
+<li>List Node for INODE Page List: 如果一个表空间存在的段超过85个，那么一个INODE类型的页面不足以存储所有的段对应的INODE Entry结构，所以就需要额外的INODE类型的页来存储这些结构。为了方便管理这些INODE类型的页面，将其串连成2个不同的链表<ol>
+<li>SET_INODE_FULL链表：在该链表中，INODE类型的页面中已经没有空间来存储INODE Entry结构了</li>
+<li>SET_INODE_FREE链表: 在该链表中，INODE类型的页面还有空闲来存储INODE Entry结构</li>
+</ol>
+</li>
+</ul>
+<p>这2个链表的基节点存储在FSP_HDR类型页面中的File Space Header中，就是说这2个链表的基节点是固定的，从而可以轻松访问这两个链表。以后每当新创建一个段(例如创建索引)时，都会创建一个与之对应的INODE Entry，存储INODE Entry的过程如下：</p>
+<ol>
+<li>查看SET_INODE_FREE链表是否为空，如果不为空，从该链表中获取一个节点(相当于获取一个由空闲空间的INODE类型页面)，然后把该INODE Entry结构存放到该页面中，当该页面无空闲空间时，就把该页面放到SET_INODE_FULL链表中。</li>
+<li>如果SET_INODE_FREE为空，则需要从表空间的FREE_FRAG链表中申请一个页面，并将该页面类型改为INODE类型，把该页面放到SET_INODE_FREE链表中，与此同时把INODE Entry存放到该页面中。</li>
+</ol>
+<h3 id="Segment-Header结构"><a href="#Segment-Header结构" class="headerlink" title="Segment Header结构"></a>Segment Header结构</h3><p>一个索引产生2个段，分别是叶子节点段和非叶子节点段，每个段都会对应着一个INODE Entry结构。如何知道某个段对应那个INODE Entry呢？数据页(即INDEX类型的页)的Page Header部分中有2个属性：PAGE_BTR_SET_LEAF(B+树叶子结点段的头部信息，仅在B+树的根页中定义)和PAGE_BTR_SET_TOP(B+树非叶子节点段的头部信息，仅在B+树的根页中定义)，这2个属性都占用10个字节，它们其实对应一个Setment Header的结构，如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/Segment_Header%E7%BB%93%E6%9E%84.png" alt="Segment_Header结构"></p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">占用空间大小(字节)</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">Space ID of the INODE Entry</td>
+<td align="center">4</td>
+<td align="center">INODE Entry结构所在的表空间ID</td>
+</tr>
+<tr>
+<td align="center">Page Number of the INODE Entry</td>
+<td align="center">4</td>
+<td align="center">INODE Entry结构所在的页面页号</td>
+</tr>
+<tr>
+<td align="center">Byte Offset of the INODE Entry</td>
+<td align="center">2</td>
+<td align="center">INODE Entry结构在该页面中的偏移量</td>
+</tr>
+<tr>
+<td align="center">PAGE_BTR_SET_LEAF记录着叶子节点段对应的INODE Entry结构的地址是哪个表空间哪个页面的哪个偏移量；PAGE_BTR_SET_TOP记录着非叶子节点段对应的INODE Entry结构的地址是哪个表空间中哪个页面的哪个偏移量。这样，索引和对应的段的关系就建立起来了。需要注意的是:<font color="red">因为一个索引对应两个段，所以只需要在索引的根页面中记录着两个结构即可</font></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<h2 id="系统表空间"><a href="#系统表空间" class="headerlink" title="系统表空间"></a>系统表空间</h2><p>系统表空间与独立表空间基本类似，由于整个MySQL进程只有一个系统表空间，系统表空间中需要记录一些与整个系统相关的信息，所以会比独立表空间多出一些用来记录这些信息的页面，它的表空间ID为0。</p>
+<h3 id="系统表空间的整体结构"><a href="#系统表空间的整体结构" class="headerlink" title="系统表空间的整体结构"></a>系统表空间的整体结构</h3><p><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E7%B3%BB%E7%BB%9F%E8%A1%A8%E7%A9%BA%E9%97%B4%E7%BB%93%E6%9E%84.png" alt="系统表空间结构"><br>系统表空间与独立表空间最大的不同之处就是在表空间开头有许多记录整个系统属性的页面，从上图可以看到系统表空间和独立表空间的前3个页面(页号分别为0,1,2，类型分别是FSP_HDR、IBUF_BITMAP、INODE)的类型是一致的，但是页号为3-7的页面时系统表空间特有的：</p>
+<table>
+<thead>
+<tr>
+<th align="center">页号</th>
+<th align="center">页面类型</th>
+<th align="center">英文描述</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">3</td>
+<td align="center">SYS</td>
+<td align="center">Insert Buffer Header</td>
+<td align="center">存储Change Buffer的头部信息</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">INDEX</td>
+<td align="center">Insert Buffer Root</td>
+<td align="center">存储Change Buffer的根页面</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">TRX_SYS</td>
+<td align="center">Transction System</td>
+<td align="center">事务系统的相关信息</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">SYS</td>
+<td align="center">First Rollback Segment</td>
+<td align="center">第一个回滚段的信息</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">SYS</td>
+<td align="center">Data Dictionary Header</td>
+<td align="center">数据字典头部信息</td>
+</tr>
+</tbody></table>
+<p>除了这几个记录系统属性的页面之外，系统表空间的extent1和extent2这两个区的128个页面成为Doublewrite Buffer(双写缓冲区)。</p>
+<h3 id="InnoDB数据字典"><a href="#InnoDB数据字典" class="headerlink" title="InnoDB数据字典"></a>InnoDB数据字典</h3><p>我们使用INSERT语句向表中插入的那些记录称为用户数据，MySQL只是作为一个软件来为我们保管这些数据，提供方便的增删改查接口而已。但是每当像一个表中插入一条记录时，MySQL先要校验插入语句所随影的表是否存在，以及插入的列和表中的列是否符合。如果语法没有问题，还需要知道该表的聚簇索引和所有二级索引对应的根页面是哪个表空间的哪个页面，然后把记录插入对应索引的B+树中。所以MySQL除了保存插入的用户记录外，还需要保存许多额外的信息，如下：</p>
+<ul>
+<li>某个表属于哪个表空间，表里面有多少列</li>
+<li>表对应的每一个列的类型是什么</li>
+<li>该表有多少个索引，每个索引对应哪几个字段，该索引对应的跟页面在哪个表空间的哪个页面</li>
+<li>该表有哪些外键，外键对应哪个表的哪些列</li>
+<li>某个表空间对应的文件系统上的文件路径是什么</li>
+</ul>
+<p>上述信息并不是使用Insert语句插入的用户数据，实际上是为了更好的管理用户数据而不得已引入的一些额外的数据，这些数据也被称为元数据。InnoDB存储引擎特意定义了一系列的内部系统表来记录这些元数据：</p>
+<table>
+<thead>
+<tr>
+<th align="center">表明</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">SYS_TABLES</td>
+<td align="center">整个InnoDB存储引擎中所有表的信息</td>
+</tr>
+<tr>
+<td align="center">SYS_COLUMNS</td>
+<td align="center">整个InnoDB存储引擎中所有列的信息</td>
+</tr>
+<tr>
+<td align="center">SYS_INDEXES</td>
+<td align="center">整个InnoDB存储引擎中所有索引的信息</td>
+</tr>
+<tr>
+<td align="center">SYS_FIELDS</td>
+<td align="center">整个InnoDB存储引擎中所有索引对应的列的信息</td>
+</tr>
+<tr>
+<td align="center">SYS_FOREIGN</td>
+<td align="center">整个InnoDB存储引擎中所有外键的信息</td>
+</tr>
+<tr>
+<td align="center">SYS_FOREIGN_COLS</td>
+<td align="center">整个InnoDB存储引擎中所有外键对应的列的信息</td>
+</tr>
+<tr>
+<td align="center">SYS_TABLESPACES</td>
+<td align="center">整个InnoDB存储引擎中所有表空间信息</td>
+</tr>
+<tr>
+<td align="center">SYS_DATAFILES</td>
+<td align="center">整个InnoDB存储引擎中所有表空间对应的文件系统的文件路径信息</td>
+</tr>
+<tr>
+<td align="center">SYS_VIRTUAL</td>
+<td align="center">整个InnoDB存储引擎中所有虚拟生成的列的信息</td>
+</tr>
+</tbody></table>
+<p>这些系统表也被称为数据字典，他们都是以B+树的形式保存在系统表空间的某些页面中，其中SYS_TABLES、SYS_COLUMNS、SYS_INDEXES、SYS_FIELDS这四个表尤为重要，成为基本系统表</p>
+<h4 id="SYS-TABLES表"><a href="#SYS-TABLES表" class="headerlink" title="SYS_TABLES表"></a>SYS_TABLES表</h4><table>
+<thead>
+<tr>
+<th align="center">列名</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">NAME</td>
+<td align="center">表的名称</td>
+</tr>
+<tr>
+<td align="center">ID</td>
+<td align="center">在InnoDB存储引擎中，每个表都有的一个唯一的ID</td>
+</tr>
+<tr>
+<td align="center">N_COLS</td>
+<td align="center">该表拥有列的个数</td>
+</tr>
+<tr>
+<td align="center">TYPE</td>
+<td align="center">表的类型，记录了一些文件格式、行格式、压缩等信息</td>
+</tr>
+<tr>
+<td align="center">MIX_ID</td>
+<td align="center">已过时，忽略</td>
+</tr>
+<tr>
+<td align="center">MIX_LEN</td>
+<td align="center">表的一些额外属性</td>
+</tr>
+<tr>
+<td align="center">CLUSTER_ID</td>
+<td align="center">未使用，忽略</td>
+</tr>
+<tr>
+<td align="center">SPACE</td>
+<td align="center">该表所属表空间的ID</td>
+</tr>
+</tbody></table>
+<p>SYS_TABLES表有两个索引，以NAME列为主键的聚簇索引，以ID列建立的二级索引</p>
+<h4 id="SYS-COLUMNS表"><a href="#SYS-COLUMNS表" class="headerlink" title="SYS_COLUMNS表"></a>SYS_COLUMNS表</h4><table>
+<thead>
+<tr>
+<th align="center">列名</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">TABLE_ID</td>
+<td align="center">该列所属表对应的ID</td>
+</tr>
+<tr>
+<td align="center">POS</td>
+<td align="center">该列在表中是第几列</td>
+</tr>
+<tr>
+<td align="center">NAME</td>
+<td align="center">该列的名称</td>
+</tr>
+<tr>
+<td align="center">MTYPE</td>
+<td align="center">主数据类型(main data type)，就是那堆INT、CHAR、VARCHAR、FLOAT、DOUBLE之类的东西</td>
+</tr>
+<tr>
+<td align="center">PRTYPE</td>
+<td align="center">精确数据类型(prccise type)，就是修改主数据类型的那堆东西，比如是否允许NULL值，是否允许负数</td>
+</tr>
+<tr>
+<td align="center">LEN</td>
+<td align="center">该列最多占用存储空间的字节数</td>
+</tr>
+<tr>
+<td align="center">PREC</td>
+<td align="center">该列的精度，默认值都是0</td>
+</tr>
+</tbody></table>
+<p>SYS_COLUMNS表只有一个聚簇索引，即以(TABLE_ID, POS)列为主键的聚簇索引</p>
+<h4 id="SYS-INDEXES表"><a href="#SYS-INDEXES表" class="headerlink" title="SYS_INDEXES表"></a>SYS_INDEXES表</h4><table>
+<thead>
+<tr>
+<th align="center">列名</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">TABLE_ID</td>
+<td align="center">该索引所属表对应的ID</td>
+</tr>
+<tr>
+<td align="center">ID</td>
+<td align="center">在InnoDB存储引擎中，每个索引都有的一个唯一的ID</td>
+</tr>
+<tr>
+<td align="center">NAME</td>
+<td align="center">该索引的名称</td>
+</tr>
+<tr>
+<td align="center">N_FIELDS</td>
+<td align="center">该索引包含的列的个数</td>
+</tr>
+<tr>
+<td align="center">TYPE</td>
+<td align="center">该索引的类型，比如聚簇索引，唯一二级索引，更改缓冲区的索引，全文索引，普通的二级索引</td>
+</tr>
+<tr>
+<td align="center">SPACE</td>
+<td align="center">该索引根页面所在的表空间ID</td>
+</tr>
+<tr>
+<td align="center">PAGE_NO</td>
+<td align="center">该索引根页面所在的页面号</td>
+</tr>
+<tr>
+<td align="center">MERGE_THRESHOLD</td>
+<td align="center">如果页面中的记录被删除到某个比例，就尝试把该页面和相邻页面合并，这个值就是这个比例</td>
+</tr>
+</tbody></table>
+<p>SYS_INDEX表只有一个聚簇索引，即以(TABLE_ID, ID)列为主键的聚簇索引</p>
+<h4 id="SYS-FIELDS表"><a href="#SYS-FIELDS表" class="headerlink" title="SYS_FIELDS表"></a>SYS_FIELDS表</h4><table>
+<thead>
+<tr>
+<th align="center">列名</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">INDEX_ID</td>
+<td align="center">该列所属索引的ID</td>
+</tr>
+<tr>
+<td align="center">POS</td>
+<td align="center">该列在索引列中是第几列</td>
+</tr>
+<tr>
+<td align="center">COL_NAME</td>
+<td align="center">该列的名称</td>
+</tr>
+</tbody></table>
+<p>SYS_FIELDS表只有一个聚簇索引，即以(INDEX_ID, POS)列为主键的聚簇索引</p>
+<h4 id="Data-Dictionary-Header页面"><a href="#Data-Dictionary-Header页面" class="headerlink" title="Data Dictionary Header页面"></a>Data Dictionary Header页面</h4><p>只要有了上述四个基本系统表，也就意味着可以获取其他系统表以及用户定义的表的所有元数据。比如：SYS_TABLESSPACES系统表中存储了哪些表空间以及表空间对应的属性，就可以执行一下操作：</p>
+<ol>
+<li>根据表名到SYS_TABLES表中定位到具体的记录，从而获取到SYS_TABLESPACES表的TABLE_ID</li>
+<li>使用获取到的TABLE_ID到SYS_COLUMNS表中就可以获取到属于该表的所有列的信息</li>
+<li>使用获取到的TABLE_ID还可以到SYS_INDEXES表中获取所有的索引的信息。索引的信息中包括对应的INDEX_ID，还记录着该索引对应的B+树根页面是哪个表空间的哪个页面</li>
+<li>使用获取到的INDEX_ID就可以到SYS_FIELDS表中获取所有索引列的信息</li>
+</ol>
+<p>上述四个系统基本表是表中之表，这四个表的元数据硬编码到代码中，然后用一个固定的页面来记录这四个表的聚簇索引和鸡儿索引对应的B+树的位置。就是页面就是页号为7的页面，类型为SYS，记录了Data Dictionary Header的信息，除了这4个表的5个索引的根页面信息外，这个页号为7的页面还记录了整个InnoDB存储引擎的一些全局属性。如下图所示：<br><img src="/2022/03/29/%E5%88%9D%E8%AF%86MySQL/%E9%A1%B5%E5%8F%B7%E4%B8%BA7%E7%9A%84%E9%A1%B5%E7%9A%84%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86%E5%8F%8A%E5%85%B6%E6%8F%8F%E8%BF%B0.png" alt="页号为7的页的组成部分及其描述"></p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">占用空间大小(字节)</th>
+<th align="center">简单概述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">File Header(文件头部)</td>
+<td align="center">38</td>
+<td align="center">页的一些通用信息</td>
+</tr>
+<tr>
+<td align="center">Data Dictionary Header(数据字典头部)</td>
+<td align="center">52</td>
+<td align="center">记录一些基本系统表的根页面位置以及InnoDB存储引擎的一些全局信息</td>
+</tr>
+<tr>
+<td align="center">Unused</td>
+<td align="center">4</td>
+<td align="center">未使用</td>
+</tr>
+<tr>
+<td align="center">Segment Header(段头部)</td>
+<td align="center">10</td>
+<td align="center">记录本页面所在段随你应的INODE Entry位置信息</td>
+</tr>
+<tr>
+<td align="center">Empty Space(尚未使用的空间)</td>
+<td align="center">16272</td>
+<td align="center">用于页结构的填充，没啥实际意义</td>
+</tr>
+<tr>
+<td align="center">File Trailer(文件尾部)</td>
+<td align="center">8</td>
+<td align="center">校验页是否完整</td>
+</tr>
+</tbody></table>
+<p>这个页面中也有Segment Header部分，这意味着这些有关数据字典的信息当成一个段来分配存储空间，称之为数据字典段。由于目前需要记录的数据字典信息非常少(可以看到Data Dictionary Header部分仅占用了52字节)，所以该段只有一个碎片页，也就是页号为7的这个页。下面详细说一下Data Dictionary Header部分的各个字段：</p>
+<ul>
+<li>Max Row ID: 如果不显示的为表定义主键，且表中也没有不允许存储NULL值的UNIQUE键，那么InnoDB存储引擎会默认生成一个名为row_id的列作为主键，因为其是主键，索引每条记录的row_id列的值不允许重复，原则上只要一个表中的row_id列不重复就可以了，也就是说表a和表b拥有一样的row_id列也没啥关系，不过MySQL只提供了Max Row ID字段，无论哪个拥有row_id列的表插入一条记录时，该记录的row_id列的值就是Max Row ID对应的值，然后再把Max Row ID对应的值加1，该字段是全局共享的。</li>
+<li>Max Table ID: 在InnoDB存储引擎中，所有的表都对应一个唯一的ID，每次新建一个表时，就会把该字段的值加1，然后将其作为该表的ID</li>
+<li>Max Index ID: 在InnoDB存储引擎中，所有的索引都对应一个唯一的ID，每次新建一个索引时，就会把该段的值加1，然后将其作为该索引的ID</li>
+<li>Max Space ID: 在InnoDB存储引擎中，所有的表空间都对应一个唯一的ID，每次新建一个表空间时，就会把该字段的值加1，然后将其作为该表空间的ID</li>
+<li>Mix ID Low(Unused): 这个字段没啥用</li>
+<li>Root of SYS_TABLES clust index: 表示SYS_TABLES表聚簇索引的根页面的页号</li>
+<li>Root of SYS_TABLES_IDS sec index: 表示SYS_TABLES表为ID列建立的二级索引的根页面的页号</li>
+<li>Root of SYS_COLUMNS clust index: 表示SYS_COLUMNS表聚簇索引的根页面的页号</li>
+<li>Root of SYS_INDEXES clust index: 表示SYS_INDEXES表局促讴吟的根页面的页号</li>
+<li>Root of SYS_FIELDS clust index: 表示SYS_FIELDS表聚簇索引的根页面的页号</li>
+</ul>
+<h4 id="information-schema系统数据库"><a href="#information-schema系统数据库" class="headerlink" title="information_schema系统数据库"></a>information_schema系统数据库</h4><p>用户不能直接访问InnoDB的这些内部系统表，除非直接去解析系统表空间对应的文件系统上的文件。不过MySQL提供了查看这些表的内容的方法，所以在系统数据库information_schema中提供了一些以INNODB_SYS开头的表：</p>
+<ul>
+<li>INNODB_SYS_DATAFILES</li>
+<li>INNODB_SYS_VIRTUAL</li>
+<li>INNODB_SYS_INDEXES</li>
+<li>INNODB_SYS_TABLES</li>
+<li>INNODB_SYS_FIELDS</li>
+<li>INNODB_SYS_TABLESPACES</li>
+<li>INNODB_SYS_FOREIGN_COLS</li>
+<li>INNODB_SYS_COLUMNS</li>
+<li>INNODB_SYS_FOREIGN</li>
+<li>INNODB_SYS_TABLESTATS</li>
+</ul>
+<p>在information_schema数据库中，这些以INNODB_SYS开头的表并不是真正的内部系统表(内部系统表就是说以SYS开头的那些表)，而是在存储引擎启动时读取这些以SYS开头的系统表，然后填充到这些以INNODB_SYS开头的表中，以INNODB_SYS开头的表和以SYS开头的表中的字段并不完全一样，供用户查看已经足矣。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%A2%E8%AF%95-MySQL/" rel="tag"># 面试,MySQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/11/10/k8s%E5%AE%89%E8%A3%85/" rel="prev" title="k8s安装">
+                  <i class="fa fa-chevron-left"></i> k8s安装
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/06/28/ecpliselink%E7%9A%84%E4%B8%ADIndirectList%E5%AF%BC%E8%87%B4%E4%B8%8D%E8%83%BD%E4%BD%BF%E7%94%A8%E6%B5%81%E6%93%8D%E4%BD%9C/" rel="next" title="eclipselink的中IndirectList导致不能使用流操作">
+                  eclipselink的中IndirectList导致不能使用流操作 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhou jianwei</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

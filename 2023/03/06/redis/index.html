@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.0.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha256-Z1K5uhUaJXA7Ll0XrZ/0JhX4lAtZFpT6jkKrEDT0drU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.14.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="redis的过期策略 定时过期：每个设置过期时间的key都需要创建一个定时器，到过期时间就会立即清除 惰性过期：只有当访问一个key时，才会判断该key是否已过期，过期则清除 定期过期：每隔一定的时间，会扫描一定数量的数据库的expires字典中一定数量的key，并清除其中已过期的key  Redis 使用的过期删除策略是「惰性删除+定期删除」这两种策略配和使用。 redis的淘汰策略 no-ev">
+<meta property="og:type" content="article">
+<meta property="og:title" content="redis">
+<meta property="og:url" content="http://example.com/2023/03/06/redis/index.html">
+<meta property="og:site_name" content="zwlovefishの博客">
+<meta property="og:description" content="redis的过期策略 定时过期：每个设置过期时间的key都需要创建一个定时器，到过期时间就会立即清除 惰性过期：只有当访问一个key时，才会判断该key是否已过期，过期则清除 定期过期：每隔一定的时间，会扫描一定数量的数据库的expires字典中一定数量的key，并清除其中已过期的key  Redis 使用的过期删除策略是「惰性删除+定期删除」这两种策略配和使用。 redis的淘汰策略 no-ev">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/redis_list.jpg">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/redis_hash.jpg">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E8%B7%B3%E8%B7%83%E8%A1%A8.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A81.jpg">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A82.jpg">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/redis%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B7%A5%E4%BD%9C.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE%E5%8E%9F%E7%90%86.PNG">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/redis%E6%96%AD%E7%82%B9%E7%BB%AD%E4%BC%A0%E5%8E%9F%E7%90%86.PNG">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E5%88%86%E5%B8%83%E5%BC%8F%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%951.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%952.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%953.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%954.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%955.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%956.png">
+<meta property="og:image" content="http://example.com/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%957.png">
+<meta property="article:published_time" content="2023-03-06T04:49:13.000Z">
+<meta property="article:modified_time" content="2023-05-18T14:35:21.043Z">
+<meta property="article:author" content="zhou jianwei">
+<meta property="article:tag" content="面试 Redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2023/03/06/redis/redis_list.jpg">
+
+
+<link rel="canonical" href="http://example.com/2023/03/06/redis/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2023/03/06/redis/","path":"2023/03/06/redis/","title":"redis"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>redis | zwlovefishの博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">zwlovefishの博客</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">我们的征途是星辰大海</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#redis%E7%9A%84%E8%BF%87%E6%9C%9F%E7%AD%96%E7%95%A5"><span class="nav-number">1.</span> <span class="nav-text">redis的过期策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#redis%E7%9A%84%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5"><span class="nav-number">2.</span> <span class="nav-text">redis的淘汰策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">3.</span> <span class="nav-text">Redis的持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#AOF"><span class="nav-number">3.1.</span> <span class="nav-text">AOF</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RDB"><span class="nav-number">3.2.</span> <span class="nav-text">RDB</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis-%E6%8C%81%E4%B9%85%E5%8C%96%E6%97%B6%EF%BC%8C%E5%AF%B9%E8%BF%87%E6%9C%9F%E9%94%AE%E4%BC%9A%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%9A%84%EF%BC%9F"><span class="nav-number">4.</span> <span class="nav-text">Redis 持久化时，对过期键会如何处理的？</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#rdb%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">4.1.</span> <span class="nav-text">rdb持久化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#aof%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">4.2.</span> <span class="nav-text">aof持久化</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%E5%90%97"><span class="nav-number">5.</span> <span class="nav-text">Redis数据结构底层实现吗</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%A4%84%E7%90%86-string"><span class="nav-number">5.1.</span> <span class="nav-text">字符串处理(string)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%93%BE%E8%A1%A8"><span class="nav-number">5.2.</span> <span class="nav-text">链表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%97%E5%85%B8-Hash"><span class="nav-number">5.3.</span> <span class="nav-text">字典(Hash)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B7%B3%E8%B7%83%E8%A1%A8"><span class="nav-number">5.4.</span> <span class="nav-text">跳跃表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B4%E6%95%B0%E9%9B%86%E5%90%88-intset"><span class="nav-number">5.5.</span> <span class="nav-text">整数集合(intset)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8-ziplist"><span class="nav-number">5.6.</span> <span class="nav-text">压缩列表(ziplist)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BF%AB%E9%80%9F%E5%88%97%E8%A1%A8-quicklist"><span class="nav-number">5.7.</span> <span class="nav-text">快速列表(quicklist)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E7%9A%84%E7%BC%93%E5%AD%98%E7%AD%96%E7%95%A5%E6%9C%89%E5%93%AA%E4%BA%9B"><span class="nav-number">6.</span> <span class="nav-text">常见的缓存策略有哪些</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#redis%E6%98%AF%E5%8D%95%E7%BA%BF%E7%A8%8B%E8%BF%98%E6%98%AF%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84"><span class="nav-number">7.</span> <span class="nav-text">redis是单线程还是多线程的</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#redis%E7%9A%84%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%8E%9F%E7%90%86"><span class="nav-number">8.</span> <span class="nav-text">redis的主从复制原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9E%E6%8E%A5%E9%98%B6%E6%AE%B5"><span class="nav-number">8.1.</span> <span class="nav-text">连接阶段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5%E9%98%B6%E6%AE%B5"><span class="nav-number">8.2.</span> <span class="nav-text">数据同步阶段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4%E4%BC%A0%E6%92%AD%E9%98%B6%E6%AE%B5"><span class="nav-number">8.3.</span> <span class="nav-text">命令传播阶段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A2%9E%E9%87%8F%E5%A4%8D%E5%88%B6"><span class="nav-number">8.4.</span> <span class="nav-text">增量复制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%80%8E%E4%B9%88%E7%9F%A5%E9%81%93%E8%A6%81%E5%B0%86%E5%93%AA%E4%BA%9B%E5%A2%9E%E9%87%8F%E6%95%B0%E6%8D%AE%E5%8F%91%E9%80%81%E7%BB%99%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%91%A2"><span class="nav-number">8.4.1.</span> <span class="nav-text">主服务器怎么知道要将哪些增量数据发送给从服务器呢</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6"><span class="nav-number">9.</span> <span class="nav-text">哨兵机制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%93%A8%E5%85%B5%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="nav-number">9.1.</span> <span class="nav-text">哨兵的作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%93%A8%E5%85%B5%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%96%B9%E5%BC%8F"><span class="nav-number">9.2.</span> <span class="nav-text">哨兵的工作方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%93%A8%E5%85%B5%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B"><span class="nav-number">9.3.</span> <span class="nav-text">哨兵选举过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Master%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B%EF%BC%9A"><span class="nav-number">9.4.</span> <span class="nav-text">Master选举过程：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BB%E4%BB%8E%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB%E7%9A%84%E8%BF%87%E7%A8%8B"><span class="nav-number">9.5.</span> <span class="nav-text">主从故障转移的过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E7%9A%84%E6%89%A9%E5%AE%B9%E6%96%B9%E5%BC%8F%E6%9C%89%E5%9E%82%E7%9B%B4%E5%92%8C%E6%B0%B4%E5%B9%B3%E6%89%A9%E5%AE%B9%E4%B8%A4%E7%A7%8D%E6%96%B9%E5%BC%8F%EF%BC%9A"><span class="nav-number">9.6.</span> <span class="nav-text">常见的扩容方式有垂直和水平扩容两种方式：</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7"><span class="nav-number">10.</span> <span class="nav-text">数据一致性</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%95"><span class="nav-number">11.</span> <span class="nav-text">一致性哈希算法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95"><span class="nav-number">11.1.</span> <span class="nav-text">分布式算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98"><span class="nav-number">11.2.</span> <span class="nav-text">分布式缓存问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%95-1"><span class="nav-number">11.3.</span> <span class="nav-text">一致性哈希算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%B9%E9%94%99%E6%80%A7%E5%92%8C%E5%8F%AF%E6%89%A9%E5%B1%95%E6%80%A7%E5%88%86%E6%9E%90"><span class="nav-number">11.4.</span> <span class="nav-text">容错性和可扩展性分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E8%8A%82%E7%82%B9"><span class="nav-number">11.5.</span> <span class="nav-text">虚拟节点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JAVA%E5%AE%9E%E7%8E%B0"><span class="nav-number">11.6.</span> <span class="nav-text">JAVA实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%99%AE%E9%80%9Ahash%E7%AE%97%E6%B3%95%E5%92%8C%E4%B8%80%E8%87%B4%E6%80%A7hash%E7%AE%97%E6%B3%95%E7%9A%84%E5%8E%9F%E7%90%86"><span class="nav-number">11.7.</span> <span class="nav-text">普通hash算法和一致性hash算法的原理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#redis%E9%9B%86%E7%BE%A4%E5%8E%9F%E7%90%86"><span class="nav-number">12.</span> <span class="nav-text">redis集群原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#goosip%E5%8D%8F%E8%AE%AE"><span class="nav-number">12.1.</span> <span class="nav-text">goosip协议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis%E9%9B%86%E7%BE%A4%E6%95%85%E9%9A%9C%E5%8F%91%E7%8E%B0"><span class="nav-number">12.2.</span> <span class="nav-text">redis集群故障发现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis%E9%9B%86%E7%BE%A4%E6%95%85%E9%9A%9C%E6%81%A2%E5%A4%8D"><span class="nav-number">12.3.</span> <span class="nav-text">redis集群故障恢复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E6%98%AF16384%EF%BC%882-14%EF%BC%89%E4%B8%AA"><span class="nav-number">12.4.</span> <span class="nav-text">为什么是16384（2^14）个</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">zhou jianwei</p>
+  <div class="site-description" itemprop="description">Java小学生</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">19</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/03/06/redis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="zhou jianwei">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zwlovefishの博客">
+      <meta itemprop="description" content="Java小学生">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="redis | zwlovefishの博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          redis
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-03-06 12:49:13" itemprop="dateCreated datePublished" datetime="2023-03-06T12:49:13+08:00">2023-03-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2023-05-18 22:35:21" itemprop="dateModified" datetime="2023-05-18T22:35:21+08:00">2023-05-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%9D%A2%E8%AF%95/" itemprop="url" rel="index"><span itemprop="name">面试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h1 id="redis的过期策略"><a href="#redis的过期策略" class="headerlink" title="redis的过期策略"></a>redis的过期策略</h1><ol>
+<li>定时过期：每个设置过期时间的key都需要创建一个定时器，到过期时间就会立即清除</li>
+<li>惰性过期：只有当访问一个key时，才会判断该key是否已过期，过期则清除</li>
+<li>定期过期：每隔一定的时间，会扫描一定数量的数据库的expires字典中一定数量的key，并清除其中已过期的key</li>
+</ol>
+<p>Redis 使用的过期删除策略是「惰性删除+定期删除」这两种策略配和使用。</p>
+<h1 id="redis的淘汰策略"><a href="#redis的淘汰策略" class="headerlink" title="redis的淘汰策略"></a>redis的淘汰策略</h1><ol>
+<li>no-eviction：当内存不足以容纳新写入数据时，新写入操作会报错。</li>
+<li>allkeys-lru：当内存不足以容纳新写入数据时，在键空间中，移除最近最少使用的key。</li>
+<li>allkeys-random：当内存不足以容纳新写入数据时，在键空间中，随机移除某个key。</li>
+<li>volatile-lru：当内存不足以容纳新写入数据时，在设置了过期时间的键空间中，移除最近最少使用的key。</li>
+<li>volatile-random：当内存不足以容纳新写入数据时，在设置了过期时间的键空间中，随机移除某个key。</li>
+<li>volatile-ttl：当内存不足以容纳新写入数据时，在设置了过期时间的键空间中，有更早过期时间的key优先移除。</li>
+<li>volatile-lfu：淘汰所有设置了过期时间的键值中，最少使用的键值；</li>
+</ol>
+<h1 id="Redis的持久化"><a href="#Redis的持久化" class="headerlink" title="Redis的持久化"></a>Redis的持久化</h1><p>AoF和RDB</p>
+<h2 id="AOF"><a href="#AOF" class="headerlink" title="AOF"></a>AOF</h2><p>redis每执行一次写操作，就将其写入AOF文件。具体的就是：</p>
+<ol>
+<li>redis每执行一次写命令，就将其写入aof_buf缓冲区，</li>
+<li>然后通过write()将其写入内核缓冲区，此时数据还没有写入硬盘</li>
+<li>具体什么时候写入硬盘由操作系统调用</li>
+</ol>
+<p>redis提供了3种回写硬盘的机制：</p>
+<ol>
+<li>always： 每次执行写操作，都会调用fsync将该写作写入硬盘</li>
+<li>everysec： 每次执行写操作，redis服务器将内从写入aof_buf缓冲区，每秒调用fsync将内容写入硬盘</li>
+<li>no：redis不控制写入硬盘的时机，又内核决定回写的时机</li>
+</ol>
+<p>aof文件过大会触发重写机制：读取当前数据库中所有的键值对，然后使用一条命令将这些键值对写入新的aof文件，全部记录完时，就用新的aof文件替换掉老的aof文件。重写是通过创建子进程bgrewriteaof来完成的。这样做有2个好处</p>
+<ul>
+<li>主进程可以继续处理命令，不用阻塞</li>
+<li>使用子进程而不是线程的好处是，使用多线程，写数据到共享内存时需要加锁，降低性能，使用父子进程，父子进程的任何一方修改了内存，都会触发写时复制，于是父子进程间就会有各自独立的副本，不用加锁来保证安全。</li>
+</ul>
+<p>以上redis通过设置一个aof重写缓冲区，这个缓冲区在重写子进程创建后创建，当redis执行完一个写操作，会将该操作同时写入aof_buf和aof重写缓冲区。当redis完成aof重写工作后会向主进程发送一个信号，主进程会将重写缓冲区的内容添加到新的aof文件中，使得新旧aof保存的数据库数据一致，将新的aof文件改名覆盖老的aof文件</p>
+<span id="more"></span>
+<h2 id="RDB"><a href="#RDB" class="headerlink" title="RDB"></a>RDB</h2><p>rdb记录的事某一时刻redis内存的数据。redis提供了2个命令来生成rdb文件，一个是save，一个是bgsave，使用save是在主进程中完成，会造成阻塞，使用bgsave，redis会创建一个子进程来将数据写入到rdb文件。</p>
+<p>redis在执行bgsave时也是可以执行写操作的，通过写时复制(copy-on-wirte)技术<br><strong>写时复制技术</strong>：在linux中，当fork一个子进程时，不会将父进程的内存页复制一份，而是父子进程共用同一个内存分页，只有当父子进程其中一个修改了内存数据，才会复制。<br>不同进程通过虚拟内存将物理内存的地址映射为同一个就实现了共享内存的原理。</p>
+<p>创建子进程时，会复制父进程的虚拟内存和物理内存的映射，并将内存设置为只读，当父子进程修改内存时，将原来的内存复制一份新的，并重新设置其内存映射，然后将父子进程的内存读写设置为可读写。</p>
+<h1 id="Redis-持久化时，对过期键会如何处理的？"><a href="#Redis-持久化时，对过期键会如何处理的？" class="headerlink" title="Redis 持久化时，对过期键会如何处理的？"></a>Redis 持久化时，对过期键会如何处理的？</h1><h2 id="rdb持久化"><a href="#rdb持久化" class="headerlink" title="rdb持久化"></a>rdb持久化</h2><ol>
+<li>rdb生成时会检测key是否过期，过期的话就不会写入rdb文件</li>
+<li>rdb文件加载时，如果是主服务器，不会加载过期的key，如果是从服务器的话，都会加载，但是主从服务器同步时，会清空从服务器的数据</li>
+</ol>
+<h2 id="aof持久化"><a href="#aof持久化" class="headerlink" title="aof持久化"></a>aof持久化</h2><ol>
+<li>aof写入时，如果key没有过期则写入aof文件，当key过期后会追加一条del的命令写入到aof文件</li>
+<li>aof重写时，会检测key是否过期，如果key过期的话就不会将其写入aof文件</li>
+</ol>
+<p>redis主从模式下，从库不会处理过期键，从库的过期键由主库来控制，当主库的key过期后，主库执行删除操作，并将其同步给从库，然后从库执行删除操作。<br>混合持久化，AOF 文件的前半部分是 RDB 格式的全量数据，后半部分是 AOF 格式的增量数据。</p>
+<h1 id="Redis数据结构底层实现吗"><a href="#Redis数据结构底层实现吗" class="headerlink" title="Redis数据结构底层实现吗"></a>Redis数据结构底层实现吗</h1><h2 id="字符串处理-string"><a href="#字符串处理-string" class="headerlink" title="字符串处理(string)"></a>字符串处理(string)</h2><p>我们都知道redis是用C语言写，但是C语言处理字符串和数组的成本是很高的，下面我分别说几个例子</p>
+<p>没有数据结构支撑的几个问题</p>
+<ol>
+<li>极其容易造成缓冲区溢出问题，比如用strcat()，在用这个函数之前必须要先给目标变量分配足够的空间，否则就会溢出。</li>
+<li>如果要获取字符串的长度，没有数据结构的支撑，可能就需要遍历，它的复杂度是O(N)</li>
+<li>内存重分配。C字符串的每次变更(曾长或缩短)都会对数组作内存重分配。同样，如果是缩短，没有处理好多余的空间，也会造成内存泄漏。</li>
+</ol>
+<p>Redis自己构建了一种名叫Simple dynamic string(SDS)的数据结构，他分别对这几个问题作了处理。我们先来看看它的结构源码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sdshdr</span>&#123;</span></span><br><span class="line">     <span class="comment">//记录buf数组中已使用字节的数量</span></span><br><span class="line">     <span class="comment">//等于 SDS 保存字符串的长度</span></span><br><span class="line">     <span class="type">int</span> len;</span><br><span class="line">     <span class="comment">//记录 buf 数组中未使用字节的数量</span></span><br><span class="line">     <span class="type">int</span> <span class="built_in">free</span>;</span><br><span class="line">     <span class="comment">//字节数组，用于保存字符串</span></span><br><span class="line">     <span class="type">char</span> buf[];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>再来说说它的优点：</p>
+<ol>
+<li>开发者不用担心字符串变更造成的内存溢出问题。</li>
+<li>常数时间复杂度获取字符串长度len字段。</li>
+<li>空间预分配free字段，会默认留够一定的空间防止多次重分配内存。</li>
+</ol>
+<p>这就是string的底层实现，更是redis对所有字符串数据的处理方式(SDS会被嵌套到别的数据结构里使用)</p>
+<h2 id="链表"><a href="#链表" class="headerlink" title="链表"></a>链表</h2><p>Redis的链表在双向链表上扩展了头、尾节点、元素数等属性。<br><img src="/2023/03/06/redis/redis_list.jpg" alt="redis_list"><br><strong>源码</strong><br>ListNode节点数据结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span>  <span class="class"><span class="keyword">struct</span> <span class="title">listNode</span>&#123;</span></span><br><span class="line">       <span class="comment">//前置节点</span></span><br><span class="line">       <span class="class"><span class="keyword">struct</span> <span class="title">listNode</span> *<span class="title">prev</span>;</span></span><br><span class="line">       <span class="comment">//后置节点</span></span><br><span class="line">       <span class="class"><span class="keyword">struct</span> <span class="title">listNode</span> *<span class="title">next</span>;</span></span><br><span class="line">       <span class="comment">//节点的值</span></span><br><span class="line">       <span class="type">void</span> *value;  </span><br><span class="line">&#125;listNode</span><br></pre></td></tr></table></figure>
+<p>链表数据结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">list</span>&#123;</span></span><br><span class="line">     <span class="comment">//表头节点</span></span><br><span class="line">     listNode *head;</span><br><span class="line">     <span class="comment">//表尾节点</span></span><br><span class="line">     listNode *tail;</span><br><span class="line">     <span class="comment">//链表所包含的节点数量</span></span><br><span class="line">     <span class="type">unsigned</span> <span class="type">long</span> len;</span><br><span class="line">     <span class="comment">//节点值复制函数</span></span><br><span class="line">     <span class="type">void</span> (*<span class="built_in">free</span>) (<span class="type">void</span> *ptr);</span><br><span class="line">     <span class="comment">//节点值释放函数</span></span><br><span class="line">     <span class="type">void</span> (*<span class="built_in">free</span>) (<span class="type">void</span> *ptr);</span><br><span class="line">     <span class="comment">//节点值对比函数</span></span><br><span class="line">     <span class="type">int</span> (*match) (<span class="type">void</span> *ptr,<span class="type">void</span> *key);</span><br><span class="line">&#125;<span class="built_in">list</span>;</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，Redis的链表有这几个特点：</p>
+<ol>
+<li>可以直接获得头、尾节点。</li>
+<li>常数时间复杂度得到链表长度。</li>
+<li>是双向链表。</li>
+</ol>
+<h2 id="字典-Hash"><a href="#字典-Hash" class="headerlink" title="字典(Hash)"></a>字典(Hash)</h2><p>Redis的Hash，就是在数组+链表的基础上，进行了一些rehash优化等。<br><img src="/2023/03/06/redis/redis_hash.jpg" alt="redis_hash"><br><strong>数据结构源码</strong><br>哈希表：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictht</span> &#123;</span></span><br><span class="line">    <span class="comment">// 哈希表数组</span></span><br><span class="line">    dictEntry **table;</span><br><span class="line">    <span class="comment">// 哈希表大小</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> size;</span><br><span class="line">    <span class="comment">// 哈希表大小掩码，用于计算索引值</span></span><br><span class="line">    <span class="comment">// 总是等于 size - 1</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> sizemask;</span><br><span class="line">    <span class="comment">// 该哈希表已有节点的数量</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> used;</span><br><span class="line">&#125; dictht;</span><br></pre></td></tr></table></figure>
+<p>Hash表节点：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> &#123;</span></span><br><span class="line">    <span class="comment">// 键</span></span><br><span class="line">    <span class="type">void</span> *key;</span><br><span class="line">    <span class="comment">// 值</span></span><br><span class="line">    <span class="class"><span class="keyword">union</span> &#123;</span></span><br><span class="line">        <span class="type">void</span> *val;</span><br><span class="line">        <span class="type">uint64_t</span> u64;</span><br><span class="line">        <span class="type">int64_t</span> s64;</span><br><span class="line">    &#125; v;</span><br><span class="line">    <span class="comment">// 指向下个哈希表节点，形成链表</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> *<span class="title">next</span>;</span>  <span class="comment">// 单链表结构</span></span><br><span class="line">&#125; dictEntry;</span><br></pre></td></tr></table></figure>
+<p>字典：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dict</span> &#123;</span></span><br><span class="line">    <span class="comment">// 类型特定函数</span></span><br><span class="line">    dictType *type;</span><br><span class="line">    <span class="comment">// 私有数据</span></span><br><span class="line">    <span class="type">void</span> *privdata;</span><br><span class="line">    <span class="comment">// 哈希表</span></span><br><span class="line">    dictht ht[<span class="number">2</span>];</span><br><span class="line">    <span class="comment">// rehash 索引</span></span><br><span class="line">    <span class="comment">// 当 rehash 不在进行时，值为 -1</span></span><br><span class="line">    <span class="type">int</span> rehashidx; <span class="comment">/* rehashing not in progress if rehashidx == -1 */</span></span><br><span class="line">&#125; dict;</span><br></pre></td></tr></table></figure>
+<p>可以看出：</p>
+<ol>
+<li>Reids的Hash采用链地址法来处理冲突，然后它没有使用红黑树优化。</li>
+<li>哈希表节点采用单链表结构。</li>
+<li>rehash优化。</li>
+</ol>
+<p><strong>它的rehash优化。</strong><br>当哈希表的键对太多或者太少，就需要对哈希表的大小进行调整，redis是如何调整的呢?</p>
+<ol>
+<li>我们仔细可以看到dict结构里有个字段dictht ht[2]代表有两个dictht数组。第一步就是为ht[1]哈希表分配空间，大小取决于ht[0]当前使用的情况。</li>
+<li>将保存在ht[0]中的数据rehash(重新计算哈希值)到ht[1]上。</li>
+<li>当ht[0]中所有键值对都迁移到ht[1]后，释放ht[0]，将ht[1]设置为ht[0]，并ht[1]初始化，为下一次rehash做准备。</li>
+</ol>
+<p><strong>渐进式rehash</strong><br>redis处理rehash的流程，但是更细一点的讲，它如何进行数据迁的呢？</p>
+<p>这就涉及到了渐进式rehash，redis考虑到大量数据迁移带来的cpu繁忙(可能导致一段时间内停止服务)，所以采用了渐进式rehash的方案。步骤如下：</p>
+<ol>
+<li>为ht[1]分配空间，同时持有两个哈希表(一个空表、一个有数据)。</li>
+<li>维持一个技术器rehashidx，初始值0。</li>
+<li>每次对字典增删改查，会顺带将ht[0]中的数据迁移到ht[1],rehashidx++(注意：ht[0]中的数据是只减不增的)。</li>
+<li>直到rehash操作完成，rehashidx值设为-1。</li>
+</ol>
+<p>它的好处：采用分而治之的思想，将庞大的迁移工作量划分到每一次CURD中，避免了服务繁忙。</p>
+<h2 id="跳跃表"><a href="#跳跃表" class="headerlink" title="跳跃表"></a>跳跃表</h2><p>这个数据结构是我面试中见过最多的，它其实特别简单。学过的人可能都知道，它和平衡树性能很相似，但为什么不用平衡树而用skipList呢?<br><img src="/2023/03/06/redis/%E8%B7%B3%E8%B7%83%E8%A1%A8.png" alt="跳跃表"><br><strong>skipList &amp; AVL 之间的选择</strong></p>
+<ol>
+<li>从算法实现难度上来比较，skiplist比平衡树要简单得多。</li>
+<li>平衡树的插入和删除操作可能引发子树的调整，逻辑复杂，而skiplist的插入和删除只需要修改相邻节点的指针，操作简单又快速。</li>
+<li>查找单个key，skiplist和平衡树的时间复杂度都为O(log n)，大体相当。</li>
+<li>在做范围查找的时候，平衡树比skiplist操作要复杂。</li>
+<li>skiplist和各种平衡树（如AVL、红黑树等）的元素是有序排列的。</li>
+</ol>
+<p>可以看到，skipList中的元素是有序的，所以跳跃表在redis中用在有序集合键、集群节点内部数据结构</p>
+<p><strong>源码</strong></p>
+<p>跳跃表节点：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">zskiplistNode</span> &#123;</span></span><br><span class="line">    <span class="comment">// 后退指针</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">zskiplistNode</span> *<span class="title">backward</span>;</span></span><br><span class="line">    <span class="comment">// 分值</span></span><br><span class="line">    <span class="type">double</span> score;</span><br><span class="line">    <span class="comment">// 成员对象</span></span><br><span class="line">    robj *obj;</span><br><span class="line">    <span class="comment">// 层</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">zskiplistLevel</span> &#123;</span></span><br><span class="line">        <span class="comment">// 前进指针</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">zskiplistNode</span> *<span class="title">forward</span>;</span></span><br><span class="line">        <span class="comment">// 跨度</span></span><br><span class="line">        <span class="type">unsigned</span> <span class="type">int</span> span;</span><br><span class="line">    &#125; level[];</span><br><span class="line">&#125; zskiplistNode;</span><br></pre></td></tr></table></figure>
+
+<p>跳跃表：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">zskiplist</span> &#123;</span></span><br><span class="line">    <span class="comment">// 表头节点和表尾节点</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">zskiplistNode</span> *<span class="title">header</span>, *<span class="title">tail</span>;</span></span><br><span class="line">    <span class="comment">// 表中节点的数量</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> length;</span><br><span class="line">    <span class="comment">// 表中层数最大的节点的层数</span></span><br><span class="line">    <span class="type">int</span> level;</span><br><span class="line">&#125; zskiplist;</span><br></pre></td></tr></table></figure>
+
+<p>层(level[]):层，也就是level[]字段，层的数量越多，访问节点速度越快。(因为它相当于是索引，层数越多，它索引就越细，就能很快找到索引值)</p>
+<p>前进指针(forward):层中有一个forward字段，用于从表头向表尾方向访问。</p>
+<p>跨度(span):用于记录两个节点之间的距离</p>
+<p>后退指针(backward):用于从表尾向表头方向访问。</p>
+<p><strong>案例</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">level0    1----------&gt;5</span><br><span class="line">level1    1----&gt;3----&gt;5</span><br><span class="line">level2    1-&gt;2-&gt;3-&gt;4-&gt;5-&gt;6-&gt;7-&gt;8</span><br></pre></td></tr></table></figure>
+<p>比如我要找键为6的元素，在level0中直接定位到5，然后再往后走一个元素就找到了。</p>
+<h2 id="整数集合-intset"><a href="#整数集合-intset" class="headerlink" title="整数集合(intset)"></a>整数集合(intset)</h2><p>Reids对整数存储专门作了优化，intset就是redis用于保存整数值的集合数据结构。当一个结合中只包含整数元素，redis就会用这个来存储。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>[<span class="number">2</span>]&gt; sadd number <span class="number">1</span> <span class="number">2</span> <span class="number">3</span> <span class="number">4</span> <span class="number">5</span> <span class="number">6</span></span><br><span class="line">(integer) <span class="number">6</span></span><br><span class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>[<span class="number">2</span>]&gt; object encoding number</span><br><span class="line"><span class="string">&quot;intset&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>源码</strong></p>
+<p>intset数据结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">intset</span> &#123;</span></span><br><span class="line">    <span class="comment">// 编码方式</span></span><br><span class="line">    <span class="type">uint32_t</span> encoding;</span><br><span class="line">    <span class="comment">// 集合包含的元素数量</span></span><br><span class="line">    <span class="type">uint32_t</span> length;</span><br><span class="line">    <span class="comment">// 保存元素的数组</span></span><br><span class="line">    <span class="type">int8_t</span> contents[];</span><br><span class="line">&#125; intset;</span><br></pre></td></tr></table></figure>
+<p>编码方式(encoding)字段是干嘛用的呢？</p>
+<ul>
+<li>如果 encoding 属性的值为 INTSET_ENC_INT16 ， 那么 contents 就是一个 int16_t 类型的数组， 数组里的每个项都是一个 int16_t 类型的整数值 （最小值为 -32,768 ，最大值为 32,767 ）。</li>
+<li>如果 encoding 属性的值为 INTSET_ENC_INT32 ， 那么 contents 就是一个 int32_t 类型的数组， 数组里的每个项都是一个 int32_t 类型的整数值 （最小值为 -2,147,483,648 ，最大值为 2,147,483,647 ）。</li>
+<li>如果 encoding 属性的值为 INTSET_ENC_INT64 ， 那么 contents 就是一个 int64_t 类型的数组， 数组里的每个项都是一个 int64_t 类型的整数值 （最小值为 -9,223,372,036,854,775,808 ，最大值为 9,223,372,036,854,775,807 ）。</li>
+</ul>
+<p>说白了就是根据contents字段来判断用哪个int类型更好，也就是对int存储作了优化。</p>
+<p>说到优化，那redis如何作的呢？就涉及到了升级。</p>
+<p><strong>encoding升级</strong></p>
+<p>如果我们有个Int16类型的整数集合，现在要将65535(int32)加进这个集合，int16是存储不下的，所以就要对整数集合进行升级。</p>
+<p>它是怎么升级的呢(过程)？</p>
+<p>假如现在有2个int16的元素:1和2，新加入1个int32位的元素65535。</p>
+<ul>
+<li>内存重分配，新加入后应该是3个元素，所以分配3*32-1&#x3D;95位。</li>
+<li>选择最大的数65535, 放到(95-32+1, 95)位这个内存段中，然后2放到(95-32-32+1+1, 95-32)位…依次类推。</li>
+</ul>
+<p>升级的好处是什么呢？</p>
+<ol>
+<li>提高了整数集合的灵活性。</li>
+<li>尽可能节约内存(能用小的就不用大的)。</li>
+</ol>
+<p>不支持降级</p>
+<p>按照上面的例子，如果我把65535又删掉，encoding会不会又回到Int16呢，答案是不会的。官方没有给出理由，我觉得应该是降低性能消耗吧，毕竟调整一次是O(N)的时间复杂度。</p>
+<h2 id="压缩列表-ziplist"><a href="#压缩列表-ziplist" class="headerlink" title="压缩列表(ziplist)"></a>压缩列表(ziplist)</h2><p>ziplist是redis为了节约内存而开发的顺序型数据结构。它被用在列表键和哈希键中。一般用于小数据存储。<br><img src="/2023/03/06/redis/%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A81.jpg" alt="压缩列表1"><br><img src="/2023/03/06/redis/%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A82.jpg" alt="压缩列表2"></p>
+<p><strong>源码</strong></p>
+<p>ziplist没有明确定义结构体，这里只作大概的演示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">entry</span> &#123;</span></span><br><span class="line">     <span class="comment">/*前一个元素长度需要空间和前一个元素长度*/</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> prevlengh;</span><br><span class="line">     <span class="comment">/*元素内容编码*/</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> encoding;</span><br><span class="line">     <span class="comment">/*元素实际内容*/</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> *data;</span><br><span class="line">&#125;zlentry;</span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ziplist</span>&#123;</span></span><br><span class="line">     <span class="comment">/*ziplist分配的内存大小*/</span></span><br><span class="line">     <span class="type">uint32_t</span> zlbytes;</span><br><span class="line">     <span class="comment">/*达到尾部的偏移量*/</span></span><br><span class="line">     <span class="type">uint32_t</span> zltail;</span><br><span class="line">     <span class="comment">/*存储元素实体个数*/</span></span><br><span class="line">     <span class="type">uint16_t</span> zllen;</span><br><span class="line">     <span class="comment">/*存储内容实体元素*/</span></span><br><span class="line">     <span class="type">unsigned</span> <span class="type">char</span>* entry[];</span><br><span class="line">     <span class="comment">/*尾部标识*/</span></span><br><span class="line">     <span class="type">unsigned</span> <span class="type">char</span> zlend;</span><br><span class="line">&#125;ziplist;</span><br></pre></td></tr></table></figure>
+
+<p>Entry的分析</p>
+<p>entry结构体里面有三个重要的字段：</p>
+<ol>
+<li>previous_entry_length: 这个字段记录了ziplist中前一个节点的长度，什么意思？就是说通过该属性可以进行指针运算达到表尾向表头遍历，这个字段还有一个大问题下面会讲。</li>
+<li>encoding:记录了数据类型(int16? string?)和长度。</li>
+<li>data&#x2F;content: 记录数据。</li>
+</ol>
+<p>连锁更新</p>
+<p>previous_entry_length字段的分析</p>
+<p>上面有说到，previous_entry_length这个字段存放上个节点的长度，那默认长度给分配多少呢?redis是这样分的，如果前节点长度小于254,就分配1字节，大于的话分配5字节，那问题就来了。</p>
+<p>如果前一个节点的长度刚开始小于254字节，后来大于254,那不就存放不下了吗？ 这就涉及到previous_entry_length的更新，但是改一个肯定不行阿，后面的节点内存信息都需要改。所以就需要重新分配内存，然后连锁更新包括该受影响节点后面的所有节点。</p>
+<p>除了增加新节点会引发连锁更新、删除节点也会触发。</p>
+<h2 id="快速列表-quicklist"><a href="#快速列表-quicklist" class="headerlink" title="快速列表(quicklist)"></a>快速列表(quicklist)</h2><p>一个由ziplist组成的双向链表。但是一个quicklist可以有多个quicklist节点，它很像B树的存储方式。是在redis3.2版本中新加的数据结构，用在列表的底层实现。<br>表头结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">quicklist</span> &#123;</span></span><br><span class="line">    <span class="comment">//指向头部(最左边)quicklist节点的指针</span></span><br><span class="line">    quicklistNode *head;</span><br><span class="line">    <span class="comment">//指向尾部(最右边)quicklist节点的指针</span></span><br><span class="line">    quicklistNode *tail;</span><br><span class="line">    <span class="comment">//ziplist中的entry节点计数器</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> count;        <span class="comment">/* total count of all entries in all ziplists*/</span></span><br><span class="line">    <span class="comment">//quicklist的quicklistNode节点计数器</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> len;           <span class="comment">/* number of quicklistNodes */</span></span><br><span class="line">    <span class="comment">//保存ziplist的大小，配置文件设定，占16bits</span></span><br><span class="line">    <span class="type">int</span> fill : <span class="number">16</span>;              <span class="comment">/* fill factor for individual nodes */</span></span><br><span class="line">    <span class="comment">//保存压缩程度值，配置文件设定，占16bits，0表示不压缩</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> compress : <span class="number">16</span>; <span class="comment">/* depth of end nodes not to compress;0=off */</span></span><br><span class="line">&#125; quicklist;</span><br></pre></td></tr></table></figure>
+<p>quicklist节点结构</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">quicklistNode</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">quicklistNode</span> *<span class="title">prev</span>;</span>     <span class="comment">//前驱节点指针</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">quicklistNode</span> *<span class="title">next</span>;</span>     <span class="comment">//后继节点指针</span></span><br><span class="line">    <span class="comment">//不设置压缩数据参数recompress时指向一个ziplist结构</span></span><br><span class="line">    <span class="comment">//设置压缩数据参数recompress指向quicklistLZF结构</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> *zl;</span><br><span class="line">    <span class="comment">//压缩列表ziplist的总长度</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> sz;                  <span class="comment">/* ziplist size in bytes */</span></span><br><span class="line">    <span class="comment">//ziplist中包的节点数，占16 bits长度</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> count : <span class="number">16</span>;          <span class="comment">/* count of items in ziplist */</span></span><br><span class="line">    <span class="comment">//表示是否采用了LZF压缩算法压缩quicklist节点，1表示压缩过，2表示没压缩，占2 bits长度</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> encoding : <span class="number">2</span>;        <span class="comment">/* RAW==1 or LZF==2 */</span></span><br><span class="line">    <span class="comment">//表示一个quicklistNode节点是否采用ziplist结构保存数据，2表示压缩了，1表示没压缩，默认是2，占2bits长度</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> container : <span class="number">2</span>;       <span class="comment">/* NONE==1 or ZIPLIST==2 */</span></span><br><span class="line">    <span class="comment">//标记quicklist节点的ziplist之前是否被解压缩过，占1bit长度</span></span><br><span class="line">    <span class="comment">//如果recompress为1，则等待被再次压缩</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> recompress : <span class="number">1</span>; <span class="comment">/* was this node previous compressed? */</span></span><br><span class="line">    <span class="comment">//测试时使用</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> attempted_compress : <span class="number">1</span>; <span class="comment">/* node can&#x27;t compress; too small */</span></span><br><span class="line">    <span class="comment">//额外扩展位，占10bits长度</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> extra : <span class="number">10</span>; <span class="comment">/* more bits to steal for future usage */</span></span><br><span class="line">&#125; quicklistNode;</span><br></pre></td></tr></table></figure>
+
+<p><strong>相关配置</strong></p>
+<p>在redis.conf中的ADVANCED CONFIG部分：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">list-max-ziplist-size -2</span><br><span class="line">list-compress-depth 0</span><br></pre></td></tr></table></figure>
+
+<p>list-max-ziplist-size参数:</p>
+<p>我们来详细解释一下list-max-ziplist-size这个参数的含义。它可以取正值，也可以取负值。</p>
+<p>当取正值的时候，表示按照数据项个数来限定每个quicklist节点上的ziplist长度。比如，当这个参数配置成5的时候，表示每个quicklist节点的ziplist最多包含5个数据项。</p>
+<p>当取负值的时候，表示按照占用字节数来限定每个quicklist节点上的ziplist长度。这时，它只能取-1到-5这五个值，每个值含义如下：</p>
+<ul>
+<li>-5: 每个quicklist节点上的ziplist大小不能超过64 Kb。（注：1kb &#x3D;&gt; 1024 bytes)</li>
+<li>-4: 每个quicklist节点上的ziplist大小不能超过32 Kb。</li>
+<li>-3: 每个quicklist节点上的ziplist大小不能超过16 Kb。</li>
+<li>-2: 每个quicklist节点上的ziplist大小不能超过8 Kb。（-2是Redis给出的默认值）</li>
+</ul>
+<p>list-compress-depth参数:</p>
+<p>这个参数表示一个quicklist两端不被压缩的节点个数。注：这里的节点个数是指quicklist双向链表的节点个数，而不是指ziplist里面的数据项个数。实际上，一个quicklist节点上的ziplist，如果被压缩，就是整体被压缩的。</p>
+<p>参数list-compress-depth的取值含义如下：</p>
+<ul>
+<li>0: 是个特殊值，表示都不压缩。这是Redis的默认值。 </li>
+<li>1: 表示quicklist两端各有1个节点不压缩，中间的节点压缩。 </li>
+<li>2: 表示quicklist两端各有2个节点不压缩，中间的节点压缩。 </li>
+<li>3: 表示quicklist两端各有3个节点不压缩，中间的节点压缩。 </li>
+<li>依此类推…</li>
+</ul>
+<ol>
+<li>String 类型的应用场景：缓存对象、常规计数、分布式锁、共享 session 信息等。</li>
+<li>List 类型的应用场景：消息队列（但是有两个问题：1. 生产者需要自行实现全局唯一 ID；2. 不能以消费组形式消费数据）等。</li>
+<li>Hash 类型：缓存对象、购物车等。</li>
+<li>Set 类型：聚合计算（并集、交集、差集）场景，比如点赞、共同关注、抽奖活动等。</li>
+<li>Zset 类型：排序场景，比如排行榜、电话和姓名排序等。<br>Redis 后续版本又支持四种数据类型，它们的应用场景如下：</li>
+<li>BitMap（2.2 版新增）：二值状态统计的场景，比如签到、判断用户登陆状态、连续签到用户总数等；</li>
+<li>HyperLogLog（2.8 版新增）：海量数据基数统计的场景，比如百万级网页 UV 计数等；</li>
+<li>GEO（3.2 版新增）：存储地理位置信息的场景，比如滴滴叫车；</li>
+<li>Stream（5.0 版新增）：消息队列，相比于基于 List 类型实现的消息队列，有这两个特有的特性：自动生成全局唯一消息ID，支持以消费组形式消费数据。</li>
+</ol>
+<h1 id="常见的缓存策略有哪些"><a href="#常见的缓存策略有哪些" class="headerlink" title="常见的缓存策略有哪些"></a>常见的缓存策略有哪些</h1><ol>
+<li>Cache Aside(旁路缓存)策略：写：先更新数据库，在删除缓存，读：先读缓存，如果有的话直接返回，如果缓存没有的话，在读数据库，将读出来的数据写入缓存，在返回</li>
+<li>Read&#x2F;Write Through(读穿 &#x2F; 写穿)策略：写：先查询缓存，如果缓存中有数据，则更新缓存，由缓存组件更新数据库，如果缓存没有，则直接更新数据库。读：先查缓存，如果缓存有数据，则直接返回。如果没有，则由缓存组件去查数据库，然后返回给用户</li>
+<li>Write Back(写回)策略：策略在更新时，只更新缓存，同时将缓存设置为脏数据，然后立马返回，并不会更新数据库，对于数据库的更新，由缓存组件批量处理。</li>
+</ol>
+<h1 id="redis是单线程还是多线程的"><a href="#redis是单线程还是多线程的" class="headerlink" title="redis是单线程还是多线程的"></a>redis是单线程还是多线程的</h1><p><img src="/2023/03/06/redis/redis%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B7%A5%E4%BD%9C.png" alt="redis多线程工作"><br>全部流程分为以下 4 阶段：</p>
+<ul>
+<li>阶段一：服务端和客⼾端建立 Socket 连接，并分配处理线程。当有客⼾端请求和实例建立 Socket 连接时，主线程会创建和客户端的连接，并把 Socket 放入全局等待队列中。然后主线程通过轮询方法把 Socket 连接分配给 IO 线程。</li>
+<li>阶段二：IO 线程读取并解析请求。主线程把 Socket 分配给 IO 线程后，会进⼊阻塞状态等待 IO 线程完成客户端请求读取和解析。</li>
+<li>阶段三：主线程执⾏请求操作。IO 线程解析完请求后，主线程以单线程的⽅式执⾏这些命令操作。</li>
+<li>阶段四：IO 线程回写 Socket 和主线程清空全局队。主线程执行完请求操作后，会把需要返回的结果写入缓冲区。然后，主线程会阻塞等待 IO 线程把这些结果回写到 Socket 中，并返回给客户端。等到 IO 线程回写 Socket 完毕，主线程会清空全局队列，等待客户端的后续请求。</li>
+</ul>
+<h1 id="redis的主从复制原理"><a href="#redis的主从复制原理" class="headerlink" title="redis的主从复制原理"></a>redis的主从复制原理</h1><p>分为三个阶段: 1. 连接阶段 2. 数据同步阶段 3. 命令传播阶段</p>
+<h2 id="连接阶段"><a href="#连接阶段" class="headerlink" title="连接阶段"></a>连接阶段</h2><p>从服务器向主服务器发送psync命令表示要进行同步，psync命令包含2个参数，主服务器的id和复制进度offset，因为不知道主服务器的id是多少，因此使用?，又因为是第一次复制，所以offset是-1。主服务器发送fullresync命令，该命令带上主服务器自己的runId和复制进度-1给从服务器，fullresync响应命令的意图是全量复制。</p>
+<h2 id="数据同步阶段"><a href="#数据同步阶段" class="headerlink" title="数据同步阶段"></a>数据同步阶段</h2><ol>
+<li>主服务器同步数据给从服务器<br>主服务器生成执行bgsave生成rdb文件，并发送给从服务器，从服务器收到rdb文件后会清空当前的数据，然后载入rdb文件。主服务器生成rdb文件的同时是不会阻塞主进程的，这时，主服务器在下面这三个时间间隙中将收到的写操作命令，写入到 replication buffer 缓冲区里。</li>
+</ol>
+<ul>
+<li>主服务器生成RDB文件期间</li>
+<li>主服务器发送RDB文件给从服务器期间</li>
+<li>从服务器加载 RDB 文件期间</li>
+</ul>
+<ol start="2">
+<li>主服务器发送新写操作命令给从服务器<br>在主服务器生成的 RDB 文件发送完，从服务器收到 RDB 文件后，丢弃所有旧数据，将 RDB 数据载入到内存。完成 RDB 的载入后，会回复一个确认消息给主服务器。接着，主服务器将 replication buffer 缓冲区里所记录的写操作命令发送给从服务器，从服务器执行来自主服务器 replication buffer 缓冲区里发来的命令，这时主从服务器的数据就一致了。<h2 id="命令传播阶段"><a href="#命令传播阶段" class="headerlink" title="命令传播阶段"></a>命令传播阶段</h2>主从服务器在完成第一次同步后，双方之间就会维护一个 TCP 连接。后续主服务器可以通过这个连接继续将写操作命令传播给从服务器，然后从服务器执行该命令，使得与主服务器的数据库状态相同。而且这个连接是长连接的，目的是避免频繁的 TCP 连接和断开带来的性能开销。<br><img src="/2023/03/06/redis/%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E6%95%B0%E6%8D%AE%E5%8E%9F%E7%90%86.PNG" alt="主从复制数据原理"></li>
+</ol>
+<h2 id="增量复制"><a href="#增量复制" class="headerlink" title="增量复制"></a>增量复制</h2><p>如果主从服务器间的网络连接断开了，那么就无法进行命令传播了，这时从服务器的数据就没办法和主服务器保持一致了，客户端就可能从从服务器读到旧的数据。如果此时断开的网络，又恢复正常了，要怎么继续保证主从服务器的数据一致性呢？网络断开又恢复后，从主从服务器会采用增量复制的方式继续同步，也就是只会把网络断开期间主服务器接收到的写操作命令，同步给从服务器。</p>
+<ol>
+<li>从服务器在恢复网络后，会发送 psync 命令给主服务器，此时的 psync 命令里的 offset 参数不是 -1；</li>
+<li>主服务器收到该命令后，然后用 CONTINUE 响应命令告诉从服务器接下来采用增量复制的方式同步数据；</li>
+<li>然后主服务将主从服务器断线期间，所执行的写命令发送给从服务器，然后从服务器执行这些命令</li>
+</ol>
+<h3 id="主服务器怎么知道要将哪些增量数据发送给从服务器呢"><a href="#主服务器怎么知道要将哪些增量数据发送给从服务器呢" class="headerlink" title="主服务器怎么知道要将哪些增量数据发送给从服务器呢"></a>主服务器怎么知道要将哪些增量数据发送给从服务器呢</h3><ul>
+<li>repl_backlog_buffer: 是一个「环形」缓冲区，用于主从服务器断连后，从中找到差异的数据；</li>
+<li>replication offset: 标记上面那个缓冲区的同步进度，主从服务器都有各自的偏移量，主服务器使用 master_repl_offset 来记录自己写到的位置，从服务器使用 slave_repl_offset 来记录自己读到的位置。</li>
+</ul>
+<p>在主服务器进行命令传播时，不仅会将写命令发送给从服务器，还会将写命令写入到 repl_backlog_buffer 缓冲区里，因此 这个缓冲区里会保存着最近传播的写命令。网络断开后，当从服务器重新连上主服务器时，从服务器会通过 psync 命令将自己的复制偏移量 slave_repl_offset 发送给主服务器，主服务器根据自己的 master_repl_offset 和 slave_repl_offset 之间的差距，然后来决定对从服务器执行哪种同步操作:1. 如果判断出从服务器要读取的数据还在 repl_backlog_buffer 缓冲区里，那么主服务器将采用增量同步的方式；2. 相反，如果判断出从服务器要读取的数据已经不存在 repl_backlog_buffer 缓冲区里，那么主服务器将采用全量同步的方式。当主服务器在 repl_backlog_buffer 中找到主从服务器差异（增量）的数据后，就会将增量的数据写入到 replication buffer 缓冲区，这个缓冲区我们前面也提到过，它是缓存将要传播给从服务器的命令。<br><img src="/2023/03/06/redis/redis%E6%96%AD%E7%82%B9%E7%BB%AD%E4%BC%A0%E5%8E%9F%E7%90%86.PNG" alt="redis断点续传原理"></p>
+<h1 id="哨兵机制"><a href="#哨兵机制" class="headerlink" title="哨兵机制"></a>哨兵机制</h1><p>Sentinel(哨兵)是Redis 的高可用性解决方案：由一个或多个Sentinel实例组成的Sentinel 系统可以监视任意多个主服务器，以及这些主服务器属下的所有从服务器，并在被监视的主服务器进入下线状态时，自动将下线主服务器属下的某个从服务器升级为新的主服务器。哨兵(sentinel)是一个分布式系统，用于对主从结构中的每台服务器进行监控，当出现故障时通过投票机制选择新的master并将所有slave连接到新的master。</p>
+<h2 id="哨兵的作用"><a href="#哨兵的作用" class="headerlink" title="哨兵的作用"></a>哨兵的作用</h2><ul>
+<li>监控(Monitoring)：哨兵(sentinel) 会不断地检查你的 Master 和 Slave 是否运作正常</li>
+<li>提醒(Notification)：当被监控的某个Redis节点出现问题时, 哨兵(sentinel) 可以通过 API 向管理员或者其他应用程序发送通知。（使用较少）</li>
+<li>自动故障迁移(Automatic failover)：当一个 Master 不能正常工作时，哨兵(sentinel) 会开始一次自动故障迁移操作。1. 它会将失效 Master 的其中一个 Slave 升级为新的 Master, 并让失效 Master 的其他Slave 改为复制新的 Master。2. 它会将失效 Master 的其中一个 Slave 升级为新的 Master, 并让失效 Master 的其他Slave 改为复制新的 Master。3. Master 和 Slave 服务器切换后，Master 的 redis.conf、Slave 的 redis.conf 和sentinel.conf 的配置文件的内容都会发生相应的改变，即 Master 主服务器的 redis.conf 配置文件中会多一行 slaveof 的配置，sentinel.conf 的监控目标会随之调换。</li>
+</ul>
+<h2 id="哨兵的工作方式"><a href="#哨兵的工作方式" class="headerlink" title="哨兵的工作方式"></a>哨兵的工作方式</h2><ol>
+<li>每个 Sentinel（哨兵）进程以每秒钟一次的频率向整个集群中的 Master 主服务器，Slave 从服务器以及其他 Sentinel（哨兵）进程发送一个 PING 命令。</li>
+<li>如果一个实例（instance）距离最后一次有效回复 PING 命令的时间超过 down-after-milliseconds 选项所指定的值， 则这个实例会被 Sentinel（哨兵）进程标记为主观下线（SDOWN）。</li>
+<li>如果一个 Master 主服务器被标记为主观下线（SDOWN），则正在监视这个 Master 主服务器的所有 Sentinel（哨兵）进程要以每秒一次的频率确认 Master 主服务器的确进入了主观下线状态。</li>
+<li>当有足够数量的 Sentinel（哨兵）进程（大于等于配置文件指定的值，即quorum）在指定的时间范围内确认 Master 主服务器进入了主观下线状态（SDOWN）， 则 Master 主服务器会被标记为客观下线（ODOWN）。</li>
+<li>在一般情况下， 每个 Sentinel（哨兵）进程会以每 10 秒一次的频率向集群中的所有Master 主服务器、Slave 从服务器发送 INFO 命令。</li>
+<li>当 Master 主服务器被 Sentinel（哨兵）进程标记为客观下线（ODOWN）时，Sentinel（哨兵）进程向下线的 Master 主服务器的所有 Slave 从服务器发送 INFO 命令的频率会从 10 秒一次改为每秒一次。</li>
+<li>若没有足够数量的 Sentinel（哨兵）进程同意 Master 主服务器下线， Master 主服务器的客观下线状态就会被移除。若 Master 主服务器重新向 Sentinel（哨兵）进程发送 PING 命令返回有效回复，Master 主服务器的主观下线状态就会被移除。</li>
+<li>哪个哨兵节点判断主节点为「客观下线」，这个哨兵节点就是候选者，所谓的候选者就是想当 Leader 的哨兵。</li>
+<li>让 leader 来执行主从切换</li>
+</ol>
+<h2 id="哨兵选举过程"><a href="#哨兵选举过程" class="headerlink" title="哨兵选举过程"></a>哨兵选举过程</h2><ol>
+<li>第一个发现该master挂了的哨兵，向每个哨兵发送命令，让对方选举自己成为领头哨兵</li>
+<li>其他哨兵如果没有选举过他人，就会将这一票投给第一个发现该master挂了的哨兵</li>
+<li>第一个发现该master挂了的哨兵如果发现由超过一半哨兵投给自己，并且其数量也超过了设定的quoram参数，那么该哨兵就成了领头哨兵</li>
+<li>如果多个哨兵同时参与这个选举，那么就会重复该过程，知道选出一个领头哨兵</li>
+</ol>
+<h2 id="Master选举过程："><a href="#Master选举过程：" class="headerlink" title="Master选举过程："></a>Master选举过程：</h2><ol>
+<li><p>从所有在线的从数据库中，选择优先级最高的从数据库</p>
+</li>
+<li><p>如果有多个优先级高的从数据库，那么就会判断其偏移量，选择偏移量最小的从数据库，这里的偏移量就是增量复制的</p>
+</li>
+<li><p>如果还是有相同条件的从数据库，就会选择运行id较小的从数据库升级为master</p>
+</li>
+</ol>
+<h2 id="主从故障转移的过程"><a href="#主从故障转移的过程" class="headerlink" title="主从故障转移的过程"></a>主从故障转移的过程</h2><p>在哨兵集群中通过投票的方式，选举出了哨兵 leader 后，就可以进行主从故障转移的过程了</p>
+<ol>
+<li>在已下线主节点（旧主节点）属下的所有「从节点」里面，挑选出一个从节点，并将其转换为主节点。</li>
+<li>让已下线主节点属下的所有「从节点」修改复制目标，修改为复制「新主节点」</li>
+<li>将新主节点的 IP 地址和信息，通过「发布者&#x2F;订阅者机制」通知给客户端</li>
+<li>继续监视旧主节点，当这个旧主节点重新上线时，将它设置为新主节点的从节点；</li>
+</ol>
+<h2 id="常见的扩容方式有垂直和水平扩容两种方式："><a href="#常见的扩容方式有垂直和水平扩容两种方式：" class="headerlink" title="常见的扩容方式有垂直和水平扩容两种方式："></a>常见的扩容方式有垂直和水平扩容两种方式：</h2><ul>
+<li>垂直扩容：通过增加master内存来增加容量；</li>
+<li>水平扩容：通过增加节点来进行扩容，即在当前基础上再增加一个master节点</li>
+</ul>
+<h1 id="数据一致性"><a href="#数据一致性" class="headerlink" title="数据一致性"></a>数据一致性</h1><table>
+<thead>
+<tr>
+<th align="center">问题场景</th>
+<th align="center">描述</th>
+<th align="center">解决</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">先写缓存，再写数据库，缓存写成功，数据库写失败</td>
+<td align="center">缓存写成功，但写数据库失败或者响应延迟，则下次读取（并发读）缓存时，就出现脏读</td>
+<td align="center">这个写缓存的方式，本身就是错误的，需要改为先写数据库，把旧缓存置为失效；读取数据的时候，如果缓存不存在，则读取数据库再写缓存</td>
+</tr>
+<tr>
+<td align="center">先写数据库，再写缓存，数据库写成功，缓存写失败</td>
+<td align="center">写数据库成功，但写缓存失败，则下次读取（并发读）缓存时，则读不到数据</td>
+<td align="center">缓存使用时，假如读缓存失败，先读数据库，再回写缓存的方式实现</td>
+</tr>
+<tr>
+<td align="center">需要缓存异步刷新</td>
+<td align="center">指数据库操作和写缓存不在一个操作步骤中，比如在分布式场景下，无法做到同时写缓存或需要异步刷新（补救措施）时候</td>
+<td align="center">确定哪些数据适合此类场景，根据经验值确定合理的数据不一致时间，用户数据刷新的时间间隔</td>
+</tr>
+</tbody></table>
+<h1 id="一致性哈希算法"><a href="#一致性哈希算法" class="headerlink" title="一致性哈希算法"></a>一致性哈希算法</h1><p>Redis集群通过分布式存储的方式解决了单节点的海量数据存储的问题，对于分布式存储，需要考虑的重点就是如何将数据进行拆分到不同的Redis服务器上。常见的分区算法有hash算法、一致性hash算法，关于这些算法这里就不多介绍。</p>
+<h2 id="分布式算法"><a href="#分布式算法" class="headerlink" title="分布式算法"></a>分布式算法</h2><p>在做服务器负载均衡时候可供选择的负载均衡的算法有很多，包括： 轮循算法(Round Robin)、哈希算法(HASH)、最少连接算法(Least Connection)、响应速度算法(Response Time)、加权法(Weighted )等。其中哈希算法是最为常用的算法.</p>
+<p>典型的应用场景是： 有N台服务器提供缓存服务，需要对服务器进行负载均衡，将请求平均分发到每台服务器上，每台机器负责1&#x2F;N的服务。</p>
+<p>常用的算法是对hash结果取余数 (hash() mod N )：对机器编号从0到N-1，按照自定义的 hash()算法，对每个请求的hash()值按N取模，得到余数i，然后将请求分发到编号为i的机器。但这样的算法方法存在致命问题，如果某一台机器宕机，那么应该落在该机器的请求就无法得到正确的处理，这时需要将当掉的服务器从算法从去除，此时候会有(N-1)&#x2F;N的服务器的缓存数据需要重新进行计算;如果新增一台机器，会有N &#x2F;(N+1)的服务器的缓存数据需要进行重新计算。对于系统而言，这通常是不可接受的颠簸(因为这意味着大量缓存的失效或者数据需要转移)。那么，如何设计一个负载均衡策略，使得受到影响的请求尽可能的少呢?</p>
+<p>在Memcached、Key-Value Store 、Bittorrent DHT、LVS中都采用了Consistent Hashing算法，可以说Consistent Hashing 是分布式系统负载均衡的首选算法。</p>
+<h2 id="分布式缓存问题"><a href="#分布式缓存问题" class="headerlink" title="分布式缓存问题"></a>分布式缓存问题</h2><p>在大型web应用中，缓存可算是当今的一个标准开发配置了。在大规模的缓存应用中，应运而生了分布式缓存系统。分布式缓存系统的基本原理，大家也有所耳闻。key-value如何均匀的分散到集群中？说到此，最常规的方式莫过于hash取模的方式。比如集群中可用机器适量为N，那么key值为K的的数据请求很简单的应该路由到hash(K) mod N对应的机器。的确，这种结构是简单的，也是实用的。但是在一些高速发展的web系统中，这样的解决方案仍有些缺陷。随着系统访问压力的增长，缓存系统不得不通过增加机器节点的方式提高集群的相应速度和数据承载量。增加机器意味着按照hash取模的方式，在增加机器节点的这一时刻，大量的缓存命不中，缓存数据需要重新建立，甚至是进行整体的缓存数据迁移，瞬间会给DB带来极高的系统负载，设置导致DB服务器宕机。 那么就没有办法解决hash取模的方式带来的诟病吗？</p>
+<p>假设我们有一个网站，最近发现随着流量增加，服务器压力越来越大，之前直接读写数据库的方式不太给力了，于是我们想引入Memcached作为缓存机制。现在我们一共有三台机器可以作为Memcached服务器，如下图所示：</p>
+<p><img src="/2023/03/06/redis/%E5%88%86%E5%B8%83%E5%BC%8F%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98.png" alt="分布式缓存问题"></p>
+<p>很显然，最简单的策略是将每一次Memcached请求随机发送到一台Memcached服务器，但是这种策略可能会带来两个问题：一是同一份数据可能被存在不同的机器上而造成数据冗余，二是有可能某数据已经被缓存但是访问却没有命中，因为无法保证对相同key的所有访问都被发送到相同的服务器。因此，随机策略无论是时间效率还是空间效率都非常不好。</p>
+<p>要解决上述问题只需做到如下一点：保证对相同key的访问会被发送到相同的服务器。很多方法可以实现这一点，最常用的方法是计算哈希。例如对于每次访问，可以按如下算法计算其哈希值：<br>h &#x3D; Hash(key) % 3</p>
+<p>其中Hash是一个从字符串到正整数的哈希映射函数。这样，如果我们将Memcached Server分别编号为0、1、2，那么就可以根据上式和key计算出服务器编号h，然后去访问。</p>
+<p>这个方法虽然解决了上面提到的两个问题，但是存在一些其它的问题。如果将上述方法抽象，可以认为通过：<br>h &#x3D; Hash(key) % N</p>
+<p>这个算式计算每个key的请求应该被发送到哪台服务器，其中N为服务器的台数，并且服务器按照0 – (N-1)编号。</p>
+<p>这个算法的问题在于容错性和扩展性不好。所谓容错性是指当系统中某一个或几个服务器变得不可用时，整个系统是否可以正确高效运行；而扩展性是指当加入新的服务器后，整个系统是否可以正确高效运行。</p>
+<p>现假设有一台服务器宕机了，那么为了填补空缺，要将宕机的服务器从编号列表中移除，后面的服务器按顺序前移一位并将其编号值减一，此时每个key就要按h &#x3D; Hash(key) % (N-1)重新计算；同样，如果新增了一台服务器，虽然原有服务器编号不用改变，但是要按h &#x3D; Hash(key) % (N+1)重新计算哈希值。因此系统中一旦有服务器变更，大量的key会被重定位到不同的服务器从而造成大量的缓存不命中。而这种情况在分布式系统中是非常糟糕的。</p>
+<p>一个设计良好的分布式哈希方案应该具有良好的单调性，即服务节点的增减不会造成大量哈希重定位。一致性哈希算法就是这样一种哈希方案。</p>
+<p>Hash 算法的一个衡量指标是单调性（ Monotonicity ），定义如下：单调性是指如果已经有一些内容通过哈希分派到了相应的缓冲中，又有新的缓冲加入到系统中。哈希的结果应能够保证原有已分配的内容可以被映射到新的缓冲中去，而不会被映射到旧的缓冲集合中的其他缓冲区。</p>
+<p>容易看到，上面的简单 hash 算法 hash(object)%N 难以满足单调性要求</p>
+<h2 id="一致性哈希算法-1"><a href="#一致性哈希算法-1" class="headerlink" title="一致性哈希算法"></a>一致性哈希算法</h2><p>一致性哈希算法(Consistent Hashing Algorithm)是一种分布式算法，常用于负载均衡。Memcached client也选择这种算法，解决将key-value均匀分配到众多Memcached server上的问题。它可以取代传统的取模操作，解决了取模操作无法应对增删Memcached Server的问题(增删server会导致同一个key,在get操作时分配不到数据真正存储的server，命中率会急剧下降)。</p>
+<p>简单来说，一致性哈希将整个哈希值空间组织成一个虚拟的圆环，如假设某哈希函数H的值空间为0 - (2^32)-1（即哈希值是一个32位无符号整形），整个哈希空间环如下：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%951.png" alt="一致性哈希算法1"></p>
+<p>整个空间按顺时针方向组织。0和(2^32)-1在零点中方向重合。</p>
+<p>下一步将各个服务器使用H进行一个哈希，具体可以选择服务器的ip或主机名作为关键字进行哈希，这样每台机器就能确定其在哈希环上的位置，这里假设将上文中三台服务器使用ip地址哈希后在环空间的位置如下：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%952.png" alt="一致性哈希算法2"></p>
+<p>接下来使用如下算法定位数据访问到相应服务器：将数据key使用相同的函数H计算出哈希值h，通根据h确定此数据在环上的位置，从此位置沿环顺时针“行走”，第一台遇到的服务器就是其应该定位到的服务器。</p>
+<p>例如我们有A、B、C、D四个数据对象，经过哈希计算后，在环空间上的位置如下：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%953.png" alt="一致性哈希算法3"></p>
+<p>根据一致性哈希算法，数据A会被定为到Server 1上，D被定为到Server 3上，而B、C分别被定为到Server 2上。</p>
+<h2 id="容错性和可扩展性分析"><a href="#容错性和可扩展性分析" class="headerlink" title="容错性和可扩展性分析"></a>容错性和可扩展性分析</h2><p>下面分析一致性哈希算法的容错性和可扩展性。现假设Server 3宕机了：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%954.png" alt="一致性哈希算法4"></p>
+<p>可以看到此时A、C、B不会受到影响，只有D节点被重定位到Server 2。一般的，在一致性哈希算法中，如果一台服务器不可用，则受影响的数据仅仅是此服务器到其环空间中前一台服务器（即顺着逆时针方向行走遇到的第一台服务器）之间数据，其它不会受到影响。</p>
+<p>下面考虑另外一种情况，如果我们在系统中增加一台服务器Memcached Server 4：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%955.png" alt="一致性哈希算法5"></p>
+<p>此时A、D、C不受影响，只有B需要重定位到新的Server 4。一般的，在一致性哈希算法中，如果增加一台服务器，则受影响的数据仅仅是新服务器到其环空间中前一台服务器（即顺着逆时针方向行走遇到的第一台服务器）之间数据，其它不会受到影响。</p>
+<p>综上所述，一致性哈希算法对于节点的增减都只需重定位环空间中的一小部分数据，具有较好的容错性和可扩展性。</p>
+<h2 id="虚拟节点"><a href="#虚拟节点" class="headerlink" title="虚拟节点"></a>虚拟节点</h2><p>一致性哈希算法在服务节点太少时，容易因为节点分部不均匀而造成数据倾斜问题。例如我们的系统中有两台服务器，其环分布如下：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%956.png" alt="一致性哈希算法6"></p>
+<p>此时必然造成大量数据集中到Server 1上，而只有极少量会定位到Server 2上。为了解决这种数据倾斜问题，一致性哈希算法引入了虚拟节点机制，即对每一个服务节点计算多个哈希，每个计算结果位置都放置一个此服务节点，称为虚拟节点。具体做法可以在服务器ip或主机名的后面增加编号来实现。例如上面的情况，我们决定为每台服务器计算三个虚拟节点，于是可以分别计算“Memcached Server 1#1”、“Memcached Server 1#2”、“Memcached Server 1#3”、“Memcached Server 2#1”、“Memcached Server 2#2”、“Memcached Server 2#3”的哈希值，于是形成六个虚拟节点：</p>
+<p><img src="/2023/03/06/redis/%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%957.png" alt="一致性哈希算法7"></p>
+<h2 id="JAVA实现"><a href="#JAVA实现" class="headerlink" title="JAVA实现"></a>JAVA实现</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.security.MessageDigest;</span><br><span class="line"><span class="keyword">import</span> java.security.NoSuchAlgorithmException;</span><br><span class="line"><span class="keyword">import</span> java.util.Collection;</span><br><span class="line"><span class="keyword">import</span> java.util.SortedMap;</span><br><span class="line"><span class="keyword">import</span> java.util.TreeMap;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 一致性Hash算法</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;T&gt; 节点类型</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ConsistentHash</span>&lt;T&gt; &#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Hash计算对象，用于自定义hash算法</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    HashFunc hashFunc;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 复制的节点个数</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">int</span> numberOfReplicas;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 一致性Hash环</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> SortedMap&lt;Long, T&gt; circle = <span class="keyword">new</span> <span class="title class_">TreeMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 构造，使用Java默认的Hash算法</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> numberOfReplicas 复制的节点个数，增加每个节点的复制节点有利于负载均衡</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> nodes            节点对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">ConsistentHash</span><span class="params">(<span class="type">int</span> numberOfReplicas, Collection&lt;T&gt; nodes)</span> &#123;</span><br><span class="line">        <span class="built_in">this</span>.numberOfReplicas = numberOfReplicas;</span><br><span class="line">        <span class="built_in">this</span>.hashFunc = <span class="keyword">new</span> <span class="title class_">HashFunc</span>() &#123;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Long <span class="title function_">hash</span><span class="params">(Object key)</span> &#123;</span><br><span class="line"><span class="comment">//                return fnv1HashingAlg(key.toString());</span></span><br><span class="line">                <span class="keyword">return</span> md5HashingAlg(key.toString());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        <span class="comment">//初始化节点</span></span><br><span class="line">        <span class="keyword">for</span> (T node : nodes) &#123;</span><br><span class="line">            add(node);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 构造</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> hashFunc         hash算法对象</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> numberOfReplicas 复制的节点个数，增加每个节点的复制节点有利于负载均衡</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> nodes            节点对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">ConsistentHash</span><span class="params">(HashFunc hashFunc, <span class="type">int</span> numberOfReplicas, Collection&lt;T&gt; nodes)</span> &#123;</span><br><span class="line">        <span class="built_in">this</span>.numberOfReplicas = numberOfReplicas;</span><br><span class="line">        <span class="built_in">this</span>.hashFunc = hashFunc;</span><br><span class="line">        <span class="comment">//初始化节点</span></span><br><span class="line">        <span class="keyword">for</span> (T node : nodes) &#123;</span><br><span class="line">            add(node);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 增加节点&lt;br&gt;</span></span><br><span class="line"><span class="comment">     * 每增加一个节点，就会在闭环上增加给定复制节点数&lt;br&gt;</span></span><br><span class="line"><span class="comment">     * 例如复制节点数是2，则每调用此方法一次，增加两个虚拟节点，这两个节点指向同一Node</span></span><br><span class="line"><span class="comment">     * 由于hash算法会调用node的toString方法，故按照toString去重</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> node 节点对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">add</span><span class="params">(T node)</span> &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; numberOfReplicas; i++) &#123;</span><br><span class="line">            circle.put(hashFunc.hash(node.toString() + i), node);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 移除节点的同时移除相应的虚拟节点</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> node 节点对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">remove</span><span class="params">(T node)</span> &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; numberOfReplicas; i++) &#123;</span><br><span class="line">            circle.remove(hashFunc.hash(node.toString() + i));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 获得一个最近的顺时针节点</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> key 为给定键取Hash，取得顺时针方向上最近的一个虚拟节点对应的实际节点</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> 节点对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> T <span class="title function_">get</span><span class="params">(Object key)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (circle.isEmpty()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">long</span> <span class="variable">hash</span> <span class="operator">=</span> hashFunc.hash(key);</span><br><span class="line">        <span class="keyword">if</span> (!circle.containsKey(hash)) &#123;</span><br><span class="line">            SortedMap&lt;Long, T&gt; tailMap = circle.tailMap(hash); <span class="comment">//返回此映射的部分视图，其键大于等于 hash</span></span><br><span class="line">            hash = tailMap.isEmpty() ? circle.firstKey() : tailMap.firstKey();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//正好命中</span></span><br><span class="line">        <span class="keyword">return</span> circle.get(hash);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 使用MD5算法</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> key</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="type">long</span> <span class="title function_">md5HashingAlg</span><span class="params">(String key)</span> &#123;</span><br><span class="line">        <span class="type">MessageDigest</span> <span class="variable">md5</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            md5 = MessageDigest.getInstance(<span class="string">&quot;MD5&quot;</span>);</span><br><span class="line">            md5.reset();</span><br><span class="line">            md5.update(key.getBytes());</span><br><span class="line">            <span class="type">byte</span>[] bKey = md5.digest();</span><br><span class="line">            <span class="type">long</span> <span class="variable">res</span> <span class="operator">=</span> ((<span class="type">long</span>) (bKey[<span class="number">3</span>] &amp; <span class="number">0xFF</span>) &lt;&lt; <span class="number">24</span>) | ((<span class="type">long</span>) (bKey[<span class="number">2</span>] &amp; <span class="number">0xFF</span>) &lt;&lt; <span class="number">16</span>) | ((<span class="type">long</span>) (bKey[<span class="number">1</span>] &amp; <span class="number">0xFF</span>) &lt;&lt; <span class="number">8</span>)| (<span class="type">long</span>) (bKey[<span class="number">0</span>] &amp; <span class="number">0xFF</span>);</span><br><span class="line">            <span class="keyword">return</span> res;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (NoSuchAlgorithmException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0l</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 使用FNV1hash算法</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> key</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="type">long</span> <span class="title function_">fnv1HashingAlg</span><span class="params">(String key)</span> &#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="type">int</span> <span class="variable">p</span> <span class="operator">=</span> <span class="number">16777619</span>;</span><br><span class="line">        <span class="type">int</span> <span class="variable">hash</span> <span class="operator">=</span> (<span class="type">int</span>) <span class="number">2166136261L</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; key.length(); i++)</span><br><span class="line">            hash = (hash ^ key.charAt(i)) * p;</span><br><span class="line">        hash += hash &lt;&lt; <span class="number">13</span>;</span><br><span class="line">        hash ^= hash &gt;&gt; <span class="number">7</span>;</span><br><span class="line">        hash += hash &lt;&lt; <span class="number">3</span>;</span><br><span class="line">        hash ^= hash &gt;&gt; <span class="number">17</span>;</span><br><span class="line">        hash += hash &lt;&lt; <span class="number">5</span>;</span><br><span class="line">        <span class="keyword">return</span> hash;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Hash算法对象，用于自定义hash算法</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">HashFunc</span> &#123;</span><br><span class="line">        <span class="keyword">public</span> Long <span class="title function_">hash</span><span class="params">(Object key)</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Consistent Hashing最大限度地抑制了hash键的重新分布。另外要取得比较好的负载均衡的效果，往往在服务器数量比较少的时候需要增加虚拟节点来保证服务器能均匀的分布在圆环上。因为使用一般的hash方法，服务器的映射地点的分布非常不均匀。使用虚拟节点的思想，为每个物理节点（服务器）在圆上分配100～200个点。这样就能抑制分布不均匀，最大限度地减小服务器增减时的缓存重新分布。用户数据映射在虚拟节点上，就表示用户数据真正存储位置是在该虚拟节点代表的实际物理服务器上。</p>
+<h2 id="普通hash算法和一致性hash算法的原理"><a href="#普通hash算法和一致性hash算法的原理" class="headerlink" title="普通hash算法和一致性hash算法的原理"></a>普通hash算法和一致性hash算法的原理</h2><p>普通hash算法：将key使用hash算法计算之后，按照节点数量来取余，即hash(key)%N。优点就是比较简单，但是扩容或者摘除节点时需要重新根据映射关系计算，会导致数据重新迁移。<br>一致性hash算法：为每一个节点分配一个token，构成一个哈希环；查找时先根据key计算hash值，然后顺时针找到第一个大于等于该哈希值的token节点。优点是在加入和删除节点时只影响相邻的两个节点，缺点是加减节点会造成部分数据无法命中，所以一般用于缓存，而且用于节点量大的情况下，扩容一般增加一倍节点保障数据负载均衡。</p>
+<h1 id="redis集群原理"><a href="#redis集群原理" class="headerlink" title="redis集群原理"></a>redis集群原理</h1><p>将整个数据集按照一定规则分配到多个节点上，称为数据分片，Redis Cluster采用的分片方案是哈希分片, 基本原理如下： Redis Cluster首先定义了编号0 ~ 16383的区间，称为槽，所有的键根据哈希函数映射到0 ~ 16383整数槽内，计算公式：slot&#x3D;CRC16（key）&amp;16383。每一个节点负责维护一部分槽以及槽所映射的键值数据。</p>
+<h2 id="goosip协议"><a href="#goosip协议" class="headerlink" title="goosip协议"></a>goosip协议</h2><p>redis集群的哈希槽算法解决的是数据的存取问题，不同的哈希槽位于不同的节点上，而不同的节点维护着一份它所认为的当前集群的状态，同时，Redis集群是去中心化的架构。那么，当集群的状态发生变化时，比如新节点加入、slot迁移、节点宕机、slave提升为新Master等等，我们希望这些变化尽快被其他节点发现，Redis是如何进行处理的呢？也就是说，Redis不同节点之间是如何进行通信进行维护集群的同步状态呢？</p>
+<p>gossip协议，是基于流行病传播方式的节点或者进程之间信息交换的协议。原理就是在不同的节点间不断地通信交换信息，一段时间后，所有的节点就都有了整个集群的完整信息，并且所有节点的状态都会达成一致。每个节点可能知道所有其他节点，也可能仅知道几个邻居节点，但只要这些节可以通过网络连通，最终他们的状态就会是一致的。Gossip协议最大的好处在于，即使集群节点的数量增加，每个节点的负载也不会增加很多，几乎是恒定的。</p>
+<p>gossip 协议包含多种消息，包含 ping,pong,meet,fail 等等。<br>Redis Cluster 的节点之间会相互发送多种消息，较为重要的如下所示：</p>
+<ul>
+<li>MEET：通过「cluster meet ip port」命令，已有集群的节点会向新的节点发送邀请，加入现有集群，然后新节点就会开始与其他节点进行通信；</li>
+<li>PING：节点按照配置的时间间隔向集群中其他节点发送 ping 消息，消息中带有自己的状态，还有自己维护的集群元数据，和部分其他节点的元数据；</li>
+<li>PONG: 节点用于回应 PING 和 MEET 的消息，结构和 PING 消息类似，也包含自己的状态和其他信息，也可以用于信息广播和更新；</li>
+<li>FAIL: 节点 PING 不通某节点后，会向集群所有节点广播该节点挂掉的消息。其他节点收到消息后标记已下线</li>
+</ul>
+<h2 id="redis集群故障发现"><a href="#redis集群故障发现" class="headerlink" title="redis集群故障发现"></a>redis集群故障发现</h2><ol>
+<li>主观下线： 当cluster-node-timeout时间内某节点无法与另一个节点顺利完成ping消息通信时，则将该节点标记为主观下线状态。</li>
+<li>客观下线：当某个节点判断另一个节点主观下线后，该节点的下线报告会通过Gossip消息传播。当接收节点发现消息体中含有主观下线的节点，其会尝试对该节点进行客观下线，依据下线报告是否在有效期内(如果在cluster-node-timeout*2时间内无法收集到一半以上槽节点的下线报告，那么之前的下线报告会过期)，且数量大于槽节点总数的一半。若是，则将该节点更新为客观下线，并向集群广播下线节点的fail消息。</li>
+</ol>
+<h2 id="redis集群故障恢复"><a href="#redis集群故障恢复" class="headerlink" title="redis集群故障恢复"></a>redis集群故障恢复</h2><p>故障节点变为客观下线后，如果下线节点是持有槽的主节点，则需要在它的从节点中选出一个替换它，从而保证集群的高可用，过程如下：</p>
+<ol>
+<li>资格审查：从节点符合故障转移资格后，更新触发故障选举时间，只有到达该时间才能执行后续流程。采用延迟触发机制，主要是对多个从节点使用不同的延迟选举时间来支持优先级。复制偏移量越大说明从节点延迟越低，那么它应该具有更高的优先级。</li>
+<li>准备选举时间：从节点符合故障转移资格后，更新触发故障选举时间，只有到达该时间才能执行后续流程。采用延迟触发机制，主要是对多个从节点使用不同的延迟选举时间来支持优先级。复制偏移量越大说明从节点延迟越低，那么它应该具有更高的优先级。</li>
+<li>发起选举：当从节点到达故障选举时间后，会触发选举流程：(1)更新配置纪元:配置纪元是一个只增不减的整数，每个主节点自身维护一个配置纪元，标示当前主节点的版本，所有主节点的配置纪元都不相等，从节点会复制主节点的配置纪元。整个集群又维护一个全局的配置纪元，用于记录集群内所有主节点配置纪元的最大版本。每次集群发生重大事件，如新加入主节点或由从节点转换而来，从节点竞争选举，都会递增集群全局配置纪元并赋值给相关主节点，用于记录这一关键事件。(2)广播选举消息：在集群内广播选举消息，并记录已发送过消息的状态，保证该从节点在一个配置纪元内只能发起一次选举。</li>
+<li>选举投票：只有持有槽的主节点才会处理故障选举消息，每个持有槽的节点在一个配置纪元内都有唯一的一张选票，当接到第一个请求投票的从节点消息，回复消息作为投票，之后相同配置纪元内其它从节点的选举消息将忽略。投票过程其实是一个领导者选举的过程。每个配置纪元代表了一次选举周期，如果在开始投票后的cluster-node-timeout*2时间内从节点没有获取足够数量的投票，则本次选举作废。从节点对配置纪元自增并发起下一轮投票，直到选举成功为止。</li>
+<li>替换主节点：当前从节点取消复制变为主节点，撤销故障主节点负责的槽，把这些槽委派给自己，并向集群广播告知所有节点当前从节点变为主节点。</li>
+</ol>
+<h2 id="为什么是16384（2-14）个"><a href="#为什么是16384（2-14）个" class="headerlink" title="为什么是16384（2^14）个"></a>为什么是16384（2^14）个</h2><p>CRC16的算法原理：</p>
+<ol>
+<li>根据CRC16的标准选择初值CRCIn的值</li>
+<li>将数据的第一个字节与CRCIn高8位异或</li>
+<li>判断最高位，若该位为 0 左移一位，若为 1 左移一位再与多项式Hex码异或</li>
+<li>重复3直至8位全部移位计算结束。<br>重复将所有输入数据操作完成以上步骤，所得16位数即16位CRC校验码</li>
+</ol>
+<p>在redis节点发送心跳包时需要把所有的槽放到这个心跳包里，以便让节点知道当前集群信息，16384&#x3D;16k，在发送心跳包时使用char进行bitmap压缩后是2k（2 * 8 (8 bit) * 1024(1k) &#x3D; 16K），也就是说使用2k的空间创建了16k的槽数。</p>
+<p>虽然使用CRC16算法最多可以分配65535（2^16-1）个槽位，65535&#x3D;65k，压缩后就是8k（8 * 8 (8 bit) * 1024(1k) &#x3D;65K），也就是说需要需要8k的心跳包，作者认为这样做不太值得；并且一般情况下一个redis集群不会有超过1000个master节点，所以16k的槽位是个比较合适的选择</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%A2%E8%AF%95-Redis/" rel="tag"># 面试 Redis</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/02/27/Java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" rel="prev" title="Java并发编程">
+                  <i class="fa fa-chevron-left"></i> Java并发编程
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/03/08/mybatis/" rel="next" title="mybatis">
+                  mybatis <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhou jianwei</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
