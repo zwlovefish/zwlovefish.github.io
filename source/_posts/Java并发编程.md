@@ -351,11 +351,13 @@ final void tryTerminate() {
             return;
         // 如果是SHUTDOWN且队列为空或者STOP状态，工作线程数不为0，尝试中断一个空闲线程
         if (workerCountOf(c) != 0) { // Eligible to terminate
-            // ONLY_ONE为true
+            // ONLY_ONE为true，中断一个，在processWorkerExit中，也会执行tryTerminate，起到传播的作用
             interruptIdleWorkers(ONLY_ONE);
             return;
         }
+        
         // 如果是SHUTDOWN且队列为空或者STOP状态，工作线程数为0，走terminated()
+        // 方法进行到这里说明线程池所有条件都已经满足关闭的要求，下面的操作就是将线程池状态置为TERMINATED
         final ReentrantLock mainLock = this.mainLock;
         mainLock.lock();
         try {
@@ -619,6 +621,157 @@ private void processWorkerExit(Worker w, boolean completedAbruptly) {
         }
         // 重新创建一个线程
         addWorker(null, false);
+    }
+}
+```
+
+线程池的出口
+```java
+void shutdown();
+List<Runnable> shutdownNow();
+boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+```
+- shutdown流程
+1. 修改线程池状态为SHUTDOWN
+2. 不再接收新提交的任务
+3. 中断线程池中空闲的线程
+4. 第3步只是中断了空闲的线程，但正在执行的任务以及线程池任务队列中的任务会继续执行完毕
+
+- shutdownNow流程
+1. 修改线程池状态为STOP
+2. 不再接收任务提交
+3. 尝试中断线程池中所有的线程（包括正在执行的线程）
+4. 返回正在等待执行的任务列表 List<Runnable\>
+
+- awaitTermination，可以配合shutdown使用
+它本身并不是用来关闭线程池的，而是主要用来判断线程池状态的。比如我们给 awaitTermination 方法传入的参数是 10 秒，那么它就会陷入 10 秒钟的等待，直到发生以下三种情况之一：
+1. 等待期间（包括进入等待状态之前）线程池已关闭并且所有已提交的任务（包括正在执行的和队列中等待的）都执行完毕，相当于线程池已经“终结”了，方法便会返回 true；
+2. 等待超时时间到后，第一种线程池“终结”的情况始终未发生，方法返回 false；
+3. 等待期间线程被中断，方法会抛出 InterruptedException 异常。
+也就是说，调用 awaitTermination 方法后当前线程会尝试等待一段指定的时间，如果在等待时间内，线程池已关闭并且内部的任务都执行完毕了，也就是说线程池真正“终结”了，那么方法就返回 true，否则超时返回 fasle。
+```java
+public void shutdown() {
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        // 检查方法调用方是否用权限关闭线程池以及中断工作线程
+        checkShutdownAccess();
+        // 设置线程池的状态为SHUTDOWN
+        advanceRunState(SHUTDOWN);
+        // 中断所有空闲线程
+        interruptIdleWorkers();
+        // 此方法在ThreadPoolExecutor中是空实现，具体实现在其子类ScheduledThreadPoolExecutor
+        // 中，用于取消延时任务。
+        onShutdown(); // hook for ScheduledThreadPoolExecutor
+    } finally {
+        mainLock.unlock();
+    }
+    // 尝试将线程池置为TERMINATED状态
+    tryTerminate();
+}
+private void interruptIdleWorkers() {
+    interruptIdleWorkers(false);
+}
+// 中断空闲线程，如果参数为false，中断所有空闲线程，如果为true，则只中断一个空闲线程
+private void interruptIdleWorkers(boolean onlyOne) {
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        for (Worker w : workers) {
+            Thread t = w.thread;
+            // 如果线程还未中断且处于空闲状态，将其中断。
+            // if条件的前半部分很好理解
+            // 后半部分 w.tryLock() 方法调用了tryAcquire(int)方法 (继承自AQS)，也就是尝试以独占的方式获取资源，
+            // 成功则返回true，表示线程处于空闲状态；失败会返回false，表示线程处于工作状态。
+            if (!t.isInterrupted() && w.tryLock()) {
+                try {
+                    t.interrupt();
+                } catch (SecurityException ignore) {
+                } finally {
+                    w.unlock();
+                }
+            }
+            // 如果为true，表示只中断一个空闲线程，并退出循环，这一情况只会用在tryTerminate()方法中
+            if (onlyOne)
+                break;
+        }
+    } finally {
+        mainLock.unlock();
+    }
+}
+
+public List<Runnable> shutdownNow() {
+    List<Runnable> tasks;
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        // 检查方法调用方是否用权限关闭线程池以及中断工作线程
+        checkShutdownAccess();
+        // 设置线程池的状态为STOP
+        advanceRunState(STOP);
+        // 中断所有线程，包括正在运行的线程
+        interruptWorkers();
+        // 将未执行的任务移入列表中
+        tasks = drainQueue();
+    } finally {
+        mainLock.unlock();
+    }
+    // 尝试将线程池置为TERMINATED状态
+    tryTerminate();
+    return tasks;
+}
+private List<Runnable> drainQueue() {
+    BlockingQueue<Runnable> q = workQueue;
+    ArrayList<Runnable> taskList = new ArrayList<Runnable>();
+    // 调用BlockingQueue的drainTo()方法转移元素
+    q.drainTo(taskList);
+    if (!q.isEmpty()) {
+        // 一个一个地转移元素
+        for (Runnable r : q.toArray(new Runnable[0])) {
+            if (q.remove(r))
+                taskList.add(r);
+        }
+    }
+    return taskList;
+}
+// 中断所有的线程，不管线程是否正在运行
+private void interruptWorkers() {
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        for (Worker w : workers)
+            w.interruptIfStarted();
+    } finally {
+        mainLock.unlock();
+    }
+}
+void interruptIfStarted() {
+    Thread t;
+    if (getState() >= 0 && (t = thread) != null && !t.isInterrupted()) {
+        try {
+            t.interrupt();
+        } catch (SecurityException ignore) {
+        }
+    }
+}
+
+public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+    long nanos = unit.toNanos(timeout);
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        for (;;) {
+            // 如果线程池已经是TERMINATED状态，返回true
+            if (runStateAtLeast(ctl.get(), TERMINATED))
+                return true;
+            // 超时但是线程池未关闭，返回false
+            if (nanos <= 0)
+                return false;
+            // 实现阻塞效果
+            nanos = termination.awaitNanos(nanos);
+        }
+    } finally {
+        mainLock.unlock();
     }
 }
 ```
