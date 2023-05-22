@@ -218,45 +218,6 @@ public void execute(Runnable command) {
     else if (!addWorker(command, false))
         reject(command);
 }
-// 拒绝策略
-final void reject(Runnable command) {
-    handler.rejectedExecution(command, this);
-}
-
-public interface RejectedExecutionHandler {
-    void rejectedExecution(Runnable r, ThreadPoolExecutor executor);
-}
-
-// 由调用者运行
-public static class CallerRunsPolicy implements RejectedExecutionHandler {
-    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
-        if (!e.isShutdown()) {
-            r.run();
-        }
-    }
-}
-// 抛出异常
-public static class AbortPolicy implements RejectedExecutionHandler {
-    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
-        throw new RejectedExecutionException("Task " + r.toString() +
-                                                " rejected from " +
-                                                e.toString());
-    }
-}
-// 丢弃任务，不做处理
-public static class DiscardPolicy implements RejectedExecutionHandler {
-    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
-    }
-}
-// 从阻塞队列中选出最老的，然后执行
-public static class DiscardOldestPolicy implements RejectedExecutionHandler {
-    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
-        if (!e.isShutdown()) {
-            e.getQueue().poll();
-            e.execute(r);
-        }
-    }
-}
 
 // 1). 采用cas将工作线程数加1，2). 新建线程并启用
 private boolean addWorker(Runnable firstTask, boolean core) {
@@ -781,6 +742,48 @@ public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedE
 2. AbortPolicy - 丢弃任务，并抛出拒绝执行 RejectedExecutionException 异常信息。线程池默认的拒绝策略。必须处理好抛出的异常，否则会打断当前的执行流程，影响后续的任务执行。
 3. DiscardPolicy - 直接丢弃，其他啥都没有
 4. DiscardOldestPolicy - 当触发拒绝策略，只要线程池没有关闭的话，丢弃阻塞队列 workQueue 中最老的一个任务，并将新任务加入
+
+```java
+// 拒绝策略
+final void reject(Runnable command) {
+    handler.rejectedExecution(command, this);
+}
+
+public interface RejectedExecutionHandler {
+    void rejectedExecution(Runnable r, ThreadPoolExecutor executor);
+}
+
+// 由调用者运行
+public static class CallerRunsPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        if (!e.isShutdown()) {
+            r.run();
+        }
+    }
+}
+// 抛出异常
+public static class AbortPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        throw new RejectedExecutionException("Task " + r.toString() +
+                                                " rejected from " +
+                                                e.toString());
+    }
+}
+// 丢弃任务，不做处理
+public static class DiscardPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+    }
+}
+// 从阻塞队列中选出最老的，然后执行
+public static class DiscardOldestPolicy implements RejectedExecutionHandler {
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        if (!e.isShutdown()) {
+            e.getQueue().poll();
+            e.execute(r);
+        }
+    }
+}
+```
 
 # JAVA捕获异常的几种方式
 1. 实现UncaughtExceptionHandler接口，JDK5之后允许我们在每一个Thread对象上添加一个异常处理器UncaughtExceptionHandler 。
