@@ -412,7 +412,51 @@ private void unparkSuccessor(Node node) {
 }
 ```
 
-RetreentLock的释放锁无论是公平锁还是非公平锁都是unlock()方法
+trylock只有非公平锁的实现，走的是nonfairTryAcquire，等价于RetreentLock非公平锁的lock()。
+```java
+public boolean tryLock() {
+    return sync.nonfairTryAcquire(1);
+}
+```
+Retreent的lockInterruptibly无论是公平锁还是非公平锁都是调用的AQS的lockInterruptibly
+```java
+public void lockInterruptibly() throws InterruptedException {
+    sync.acquireInterruptibly(1);
+}
+
+public final void acquireInterruptibly(int arg)
+        throws InterruptedException {
+    if (Thread.interrupted())
+        throw new InterruptedException();
+    if (!tryAcquire(arg))
+        doAcquireInterruptibly(arg);
+}
+
+private void doAcquireInterruptibly(int arg)
+    throws InterruptedException {
+    final Node node = addWaiter(Node.EXCLUSIVE);
+    boolean failed = true;
+    try {
+        for (;;) {
+            final Node p = node.predecessor();
+            if (p == head && tryAcquire(arg)) {
+                setHead(node);
+                p.next = null; // help GC
+                failed = false;
+                return;
+            }
+            if (shouldParkAfterFailedAcquire(p, node) &&
+                parkAndCheckInterrupt())
+                throw new InterruptedException();
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+```
+
+RetreentLock的释放锁无论是公平锁还是非公平锁都是unlock()方法，且只有一个unLock释放锁的方法
 ```java
 public void unlock() {
     sync.release(1);
