@@ -131,7 +131,320 @@ ThreadLocal，很多地方叫做线程本地变量，也有些地方叫做线程
 
 ## 锁接口
 ## AQS
+![AbstractQueuedSynchronizer](AbstractQueuedSynchronizer.png)
 
+以下所示RetreentLock的所有public方法
+
+```java
+// 获取等待队列中的线程
+public final Collection<Thread> getQueuedThreads()
+// 获取锁
+public final void acquire(int arg)
+// 获取排他模式等待队列中的线程
+public final Collection<Thread> getExclusiveQueuedThreads()
+// 获取等待队列的长度
+public final int getQueueLength()
+// 以独占模式获取，如果中断则中止
+public final void acquireInterruptibly(int arg)
+// 查询是否有线程争用过这个同步器
+public final boolean hasContended()
+// 共享模式释放锁
+public final boolean releaseShared(int arg)
+// 当前线程之前有排队的线程
+public final boolean hasQueuedPredecessors()
+// 查询给定的 ConditionObject 是否使用此同步器作为其锁
+public final boolean owns(ConditionObject condition)
+// 释放锁
+public final boolean release(int arg)
+// 获取等待队列中的第一个线程
+public final Thread getFirstQueuedThread()
+// 尝试以共享模式获取，如果中断则中止，如果给定的超时已过则失败
+public final boolean tryAcquireSharedNanos(int arg, long nanosTimeout)
+// 尝试以独占模式获取，如果中断则中止，如果超过给定的超时则失败
+public final boolean tryAcquireNanos(int arg, long nanosTimeout)
+// 判断线程是否已经加入等待队列
+public final boolean isQueued(Thread thread)
+// 判断等待队列中有线程
+public final boolean hasQueuedThreads()
+// 查询是否有线程正在等待与此同步器关联的给定条件
+public final boolean hasWaiters(ConditionObject condition)
+// 以共享模式获取，忽略中断
+public final void acquireShared(int arg)
+// 获取可能正在等待与此同步器关联的给定条件的那些线程
+public final Collection<Thread> getWaitingThreads(ConditionObject condition)
+// 以共享模式获取，如果中断则中止
+public final void acquireSharedInterruptibly(int arg)
+// 获取等待与此同步器关联的给定条件的线程数
+public final int getWaitQueueLength(ConditionObject condition)
+// 获取正在等待以共享模式获取的线程
+public final Collection<Thread> getSharedQueuedThreads()
+
+volatile int waitStatus; // 取值如下：
+// 0：节点的初始状态，新建一个 Node 实例，其状态值就是 0
+// 表明当前结点由于超时或者中断被取消获取这个锁
+static final int CANCELLED =  1;
+// 表明当前结点的后继结点需要被唤醒
+static final int SIGNAL    = -1;
+// 表明当前结点进入了等待队列
+static final int CONDITION = -2;
+// 只有 head 节点会处于这个状态，这个值存在的作用在于：连续唤醒队列中处于共享模式的节点，让他们并发获取共享资源
+static final int PROPAGATE = -3;
+```
+
+RetreentLock的整体流程图如下所示：
+![RetreentLock](RetreentLock.png)
+
+具体代码路程如下：
+```java
+public class ReentrantLock {
+    // 该Sync是一个抽象类，具体的实现是一个FairSync和NonfairSync的具体类
+    private final Sync sync;
+}
+
+// AbstractQueuedSynchronizer中：
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) && acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+// 公平锁与非公平锁的区别是公平锁多了个!hasQueuedPredecessors
+// 判断当前线程是否要排队
+// 如果当前线程之前有排队的线程，则返回true
+// 如果当前线程之前位于队列的头部或者队列为空，则返回false
+public final boolean hasQueuedPredecessors() {
+    Node t = tail;
+    Node h = head;
+    Node s;
+    return h != t 
+            && ((s = h.next) == null || s.thread != Thread.currentThread());
+}
+protected final boolean tryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    if (c == 0) {
+        // 没有线程持有锁，当前线程需要排队，返回获取锁失败，当前线程不需要排队，cas设置state为1，cas成功，返回获取锁成功，设置当前线程为持有锁的线程。cas失败，返回获取锁失败
+        if (!hasQueuedPredecessors() && compareAndSetState(0, acquires)) {
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    }
+    // 有线程持有锁，如果是同一线程，则设置state为重入次数，返回获取锁成功。
+    else if (current == getExclusiveOwnerThread()) {
+        int nextc = c + acquires;
+        if (nextc < 0)
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    // 有线程持有锁，但不是同一线程，则返回获取锁失败
+    return false;
+}
+final boolean nonfairTryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    if (c == 0) {
+        // 与公平锁的区别是不需要判断，当前线程是否需要排队
+        if (compareAndSetState(0, acquires)) {
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    }
+    else if (current == getExclusiveOwnerThread()) {
+        int nextc = c + acquires;
+        if (nextc < 0) // overflow
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    return false;
+}
+// tryAcquire或者nonfairTryAcquire获取锁失败，先将当前线程添加到队列尾部
+private Node addWaiter(Node mode) {
+    // 将节点封装成一个Node节点
+    Node node = new Node(Thread.currentThread(), mode);
+    Node pred = tail;
+    // 如果尾结点不为空，使用cas添加当前结点
+    if (pred != null) {
+        node.prev = pred;
+        if (compareAndSetTail(pred, node)) {
+            pred.next = node;
+            return node;
+        }
+    }
+    // 如果尾结点为空
+    enq(node);
+    return node;
+}
+private Node enq(final Node node) {
+    for (;;) {
+        Node t = tail;
+        // 如果尾结点为空，创建头结点，并将tail指向head，初始化队列
+        if (t == null) { // Must initialize
+            if (compareAndSetHead(new Node()))
+                tail = head;
+        } else {
+            // 如果尾结点不为空，使用cas添加当前结点
+            node.prev = t;
+            if (compareAndSetTail(t, node)) {
+                t.next = node;
+                return t;
+            }
+        }
+    }
+}
+// 该函数表示将已经在队列中的node尝试去获取锁否则挂起
+final boolean acquireQueued(final Node node, int arg) {
+    boolean failed = true;
+    try {
+        boolean interrupted = false;
+        for (;;) {
+            // 获取当前结点的前任结点p
+            final Node p = node.predecessor();
+            // 如果p为head且获取锁成功
+            if (p == head && tryAcquire(arg)) {
+                // 设置当前结点为head结点，设置p的后继结点为null，将q解引用
+                setHead(node);
+                p.next = null; // help GC
+                failed = false;
+                return interrupted;
+            }
+            // 如果当前结点不是head结点或者获取锁失败
+            if (shouldParkAfterFailedAcquire(p, node) &&
+                parkAndCheckInterrupt())
+                interrupted = true;
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+private static boolean shouldParkAfterFailedAcquire(Node pred, Node node) {
+    // 获取前驱结点的wait状态
+    int ws = pred.waitStatus;
+    // 如果前驱结点为SIGNAL，
+    if (ws == Node.SIGNAL)
+        // 前驱节点已经设置了SIGNAL，闹钟已经设好，现在我可以安心睡觉（阻塞）了。
+        // 如果前驱变成了head，并且head的代表线程exclusiveOwnerThread释放了锁，
+        // 就会来根据这个SIGNAL来唤醒自己
+        return true;
+    if (ws > 0) {
+        /*
+            * 发现传入的前驱的状态大于0，即CANCELLED。说明前驱节点已经因为超时或响应了中断，
+            * 而取消了自己。所以需要跨越掉这些CANCELLED节点，直到找到一个<=0的节点
+            */
+        do {
+            node.prev = pred = pred.prev;
+        } while (pred.waitStatus > 0);
+        pred.next = node;
+    } else {
+            /*
+            * 进入这个分支，ws只能是0或PROPAGATE。
+            * CAS设置ws为SIGNAL
+            */
+        compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
+    }
+    return false;
+}
+
+private final boolean parkAndCheckInterrupt() {
+    LockSupport.park(this);
+    return Thread.interrupted();
+}
+
+private void cancelAcquire(Node node) {
+    // Ignore if node doesn't exist
+    if (node == null)
+        return;
+
+    node.thread = null;
+
+    // 1，找到当前节点的前一个不是cancel状态的节点
+    // 并将当前节点的前指针指向其
+    Node pred = node.prev;
+    while (pred.waitStatus > 0)
+        node.prev = pred = pred.prev;
+
+    // 2. 将predNext设置为上面找的节点的后面一个节点
+    Node predNext = pred.next;
+
+    // Can use unconditional write instead of CAS here.
+    // After this atomic step, other Nodes can skip past us.
+    // Before, we are free of interference from other threads.
+    node.waitStatus = Node.CANCELLED;
+
+    // 如果当前节点是为节点，设置1找到的节点为尾节点，设置next为null
+    if (node == tail && compareAndSetTail(node, pred)) {
+        compareAndSetNext(pred, predNext, null);
+    } else {
+        
+        // 如果pred不是头结点，将pred的waitStatus设置为SINGAL，设置predNext为当前节点的后继节点，该后继节点不能是cancel状态
+        int ws;
+        if (pred != head &&
+            ((ws = pred.waitStatus) == Node.SIGNAL ||
+                (ws <= 0 && compareAndSetWaitStatus(pred, ws, Node.SIGNAL))) &&
+            pred.thread != null) {
+            Node next = node.next;
+            if (next != null && next.waitStatus <= 0)
+                compareAndSetNext(pred, predNext, next);
+        } else {
+            // 如果pred是头结点，则唤醒当前节点的后继节点
+            unparkSuccessor(node);
+        }
+
+        node.next = node; // help GC
+    }
+}
+private void unparkSuccessor(Node node) {
+    int ws = node.waitStatus;
+    if (ws < 0)
+        compareAndSetWaitStatus(node, ws, 0);
+    Node s = node.next;
+    if (s == null || s.waitStatus > 0) {
+        s = null;
+        // 从tailf节点开始向前搜索，这是为啥呢？
+        // 找到node的后继第一个waitStatus不是cancel状态的节点，并将s设置为该节点
+        for (Node t = tail; t != null && t != node; t = t.prev)
+            if (t.waitStatus <= 0)
+                s = t;
+    }
+    // 唤醒node后继中第一个不是cancel状态的节点
+    if (s != null)
+        LockSupport.unpark(s.thread);
+}
+```
+
+RetreentLock的释放锁无论是公平锁还是非公平锁都是unlock()方法
+```java
+public void unlock() {
+    sync.release(1);
+}
+
+// 如果tryRelease失败，则释放锁失败
+public final boolean release(int arg) {
+    if (tryRelease(arg)) {
+        Node h = head;
+        if (h != null && h.waitStatus != 0)
+            unparkSuccessor(h);
+        return true;
+    }
+    return false;
+}
+```
+tryRelease在AQS类中是一个抽象实现，具体的实现在RetreentLock中
+```java
+protected final boolean tryRelease(int releases) {
+    // state的值-1
+    int c = getState() - releases;
+    if (Thread.currentThread() != getExclusiveOwnerThread())
+        throw new IllegalMonitorStateException();
+    boolean free = false;
+    if (c == 0) {
+        free = true;
+        setExclusiveOwnerThread(null);
+    }
+    setState(c);
+    return free;
+}
+```
 ## 读写锁
 
 ## 锁膨胀，锁消除，锁升级
