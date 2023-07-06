@@ -110,7 +110,7 @@ __第三条规则:__ 如果一个线程先去写一个变量，然后一个线�
 
 __第四条规则:__ happens-before原则具备传递性。
 
-## 线程的六种状态和切换
+# 线程的六种状态和切换
 ![线程的六种状态](线程的六种状态.PNG)
 
 |状态名称|说明|
@@ -124,13 +124,13 @@ __第四条规则:__ happens-before原则具备传递性。
 
 
 
-## ThreadLocal使用
+# ThreadLocal使用
 ThreadLocal，很多地方叫做线程本地变量，也有些地方叫做线程本地存储，其实意思差不多。可能很多朋友都知道ThreadLocal为变量在每个线程中都创建了一个副本，那么每个线程可以访问自己内部的副本变量。
 
 
 
-## 锁接口
-## AQS
+# 锁接口
+# AQS
 ![AbstractQueuedSynchronizer](AbstractQueuedSynchronizer.png)
 
 以下所示RetreentLock的所有public方法
@@ -489,21 +489,401 @@ protected final boolean tryRelease(int releases) {
     return free;
 }
 ```
-## 读写锁
+# 读写锁
 
-## 锁膨胀，锁消除，锁升级
+# 锁膨胀，锁消除，锁升级
 
-## ConcurrentHashMap
+# ConcurrentHashMap
+```java
+// 表，懒初始化，当有值插入时才初始化，大小为2的n次幂
+transient volatile Node<K,V>[] table;
+// 只有扩容的时候不为null
+private transient volatile Node<K,V>[] nextTable;
+// 表初始化或者扩容控制，默认值为0。
+// 当为-1时，表正在初始化，
+// 当为-(1+正在扩容的线程数)，表示正在扩容
+// 如果尚未进行初始化，那这个正数表示需要初始化的大小。初始化后，保存的时下一次扩容的大小。
+private transient volatile int sizeCtl;
 
-## ForkJoin
+// 定义节点的hash值
+static final int MOVED     = -1; // hash for forwarding nodes
+static final int TREEBIN   = -2; // hash for roots of trees
+static final int RESERVED  = -3; // hash for transient reservations
 
-## CountDownLatch
 
-## 同步屏障CyclicBarrier
+static final int HASH_BITS = 0x7fffffff; // usable bits of normal node hash
 
-## 控制并发线程数的Semaphore
+ // views
+private transient KeySetView<K,V> keySet;
+private transient ValuesView<K,V> values;
+private transient EntrySetView<K,V> entrySet;
 
-## 线程池
+static final <K,V> Node<K,V> tabAt(Node<K,V>[] tab, int i) {
+    return (Node<K,V>)U.getObjectVolatile(tab, ((long)i << ASHIFT) + ABASE);
+}
+
+static final <K,V> boolean casTabAt(Node<K,V>[] tab, int i,
+                                    Node<K,V> c, Node<K,V> v) {
+    return U.compareAndSwapObject(tab, ((long)i << ASHIFT) + ABASE, c, v);
+}
+
+static final <K,V> void setTabAt(Node<K,V>[] tab, int i, Node<K,V> v) {
+    U.putObjectVolatile(tab, ((long)i << ASHIFT) + ABASE, v);
+}
+
+// 构造函数
+public ConcurrentHashMap() {}
+
+public ConcurrentHashMap(int initialCapacity) {
+    if (initialCapacity < 0)
+        throw new IllegalArgumentException();
+    int cap = ((initialCapacity >= (MAXIMUM_CAPACITY >>> 1)) ?
+                MAXIMUM_CAPACITY :
+                tableSizeFor(initialCapacity + (initialCapacity >>> 1) + 1));
+    this.sizeCtl = cap;
+}
+
+public ConcurrentHashMap(int initialCapacity, float loadFactor) {
+    this(initialCapacity, loadFactor, 1);
+}
+
+public ConcurrentHashMap(int initialCapacity,float loadFactor, int concurrencyLevel) {
+    if (!(loadFactor > 0.0f) || initialCapacity < 0 || concurrencyLevel <= 0)
+        throw new IllegalArgumentException();
+    if (initialCapacity < concurrencyLevel)   // Use at least as many bins
+        initialCapacity = concurrencyLevel;   // as estimated threads
+    long size = (long)(1.0 + (long)initialCapacity / loadFactor);
+    int cap = (size >= (long)MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : tableSizeFor((int)size);
+    this.sizeCtl = cap;
+}
+
+/**
+ * 返回一个比输入值大或相等的，离该值最近的2的整数次幂
+ */
+private static final int tableSizeFor(int c) {
+    int n = c - 1;
+    n |= n >>> 1;
+    n |= n >>> 2;
+    n |= n >>> 4;
+    n |= n >>> 8;
+    n |= n >>> 16;
+    return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
+}
+
+/**
+ * 
+ * 将高16位与低16位异或，在与HASH_BITS
+ * 
+*/
+static final int spread(int h) {
+    return (h ^ (h >>> 16)) & HASH_BITS;
+}
+
+/**
+ * 
+ * n < 0取0，n > Integer.MAX_VALUE取Integer.MAX_VALUE，否则取n
+ * 
+*/
+public int size() {
+    long n = sumCount();
+    return ((n < 0L) ? 0 :
+            (n > (long)Integer.MAX_VALUE) ? Integer.MAX_VALUE :
+            (int)n);
+}
+
+// 参考LongAdder
+final long sumCount() {
+    CounterCell[] as = counterCells; CounterCell a;
+    long sum = baseCount;
+    if (as != null) {
+        for (int i = 0; i < as.length; ++i) {
+            if ((a = as[i]) != null)
+                sum += a.value;
+        }
+    }
+    return sum;
+}
+
+static class Node<K,V> implements Map.Entry<K,V> {
+    final int hash;
+    final K key;
+    volatile V val;
+    volatile Node<K,V> next;
+
+    Node(int hash, K key, V val, Node<K,V> next) {
+        this.hash = hash;
+        this.key = key;
+        this.val = val;
+        this.next = next;
+    }
+
+    public final K getKey()       { return key; }
+    public final V getValue()     { return val; }
+    public final int hashCode()   { return key.hashCode() ^ val.hashCode(); }
+    public final String toString(){ return key + "=" + val; }
+    public final V setValue(V value) {
+        throw new UnsupportedOperationException();
+    }
+
+    public final boolean equals(Object o) {
+        Object k, v, u; Map.Entry<?,?> e;
+        return ((o instanceof Map.Entry) &&
+                (k = (e = (Map.Entry<?,?>)o).getKey()) != null &&
+                (v = e.getValue()) != null &&
+                (k == key || k.equals(key)) &&
+                (v == (u = val) || v.equals(u)));
+    }
+
+    Node<K,V> find(int h, Object k) {
+        Node<K,V> e = this;
+        if (k != null) {
+            do {
+                K ek;
+                if (e.hash == h &&
+                    ((ek = e.key) == k || (ek != null && k.equals(ek))))
+                    return e;
+            } while ((e = e.next) != null);
+        }
+        return null;
+    }
+}
+```
+## get方法
+```java
+public V get(Object key) {
+    Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
+    // 获取key的散列值
+    int h = spread(key.hashCode());
+    // 如果table中有值且桶位上的元素不为null，然后继续查找值，否则直接返回null
+    if ((tab = table) != null && (n = tab.length) > 0 && (e = tabAt(tab, (n - 1) & h)) != null) {
+        // 如果桶位上的的key相等，则直接返回e的值
+        if ((eh = e.hash) == h) {
+            if ((ek = e.key) == key || (ek != null && key.equals(ek)))
+                return e.val;
+        }
+        // 指定桶位上的节点hash值是负数
+        else if (eh < 0)
+            // 插入过程中，Node可能有上图几种类型，调用各自重写的find方法，然后返回该Node的val
+            return (p = e.find(h, key)) != null ? p.val : null;
+        // 走到这里说明是普通的链表类型 
+        while ((e = e.next) != null) {
+            if (e.hash == h &&
+                ((ek = e.key) == key || (ek != null && key.equals(ek))))
+                return e.val;
+        }
+    }
+    return null;
+}
+```
+以上节点类型
+![Node节点类型](Node节点类型.jpg)
+```java
+/**
+ * A place-holder node used in computeIfAbsent and compute
+ */
+static final class ReservationNode<K,V> extends Node<K,V> {
+    ReservationNode() {
+        // hash的固定值为-3
+        super(RESERVED, null, null, null);
+    }
+
+    Node<K,V> find(int h, Object k) {
+        return null;
+    }
+}
+
+/**
+ * A node inserted at head of bins during transfer operations.
+ */
+static final class ForwardingNode<K,V> extends Node<K,V> {
+    final Node<K,V>[] nextTable;
+    ForwardingNode(Node<K,V>[] tab) {
+        // hash值固定为-1
+        super(MOVED, null, null, null);
+        this.nextTable = tab;
+    }
+    
+    Node<K,V> find(int h, Object k) {
+        //如果当前访问的节点是ForwardingNode结点，说明数组正在进行扩容，因此会去nextTable获取数据
+        outer: for (Node<K,V>[] tab = nextTable;;) {
+            Node<K,V> e; int n;
+            if (k == null || tab == null || (n = tab.length) == 0 ||
+                (e = tabAt(tab, (n - 1) & h)) == null)
+                return null;
+            for (;;) {
+                int eh; K ek;
+                if ((eh = e.hash) == h &&
+                    ((ek = e.key) == k || (ek != null && k.equals(ek))))
+                    return e;
+                // 如果当前节点的hash值还是负数，说明节点是TreeBin节点或者ForwardingNode节点
+                if (eh < 0) {
+                    // 如果当前节点还是ForwardingNode节点，说明nextTable重新触发了扩容机制，再次赋值，跳出去重新查找
+                    if (e instanceof ForwardingNode) {
+                        tab = ((ForwardingNode<K,V>)e).nextTable;
+                        continue outer;
+                    }
+                    else
+                    // 如果是Treebin节点，则调用Treebin的find方法
+                        return e.find(h, k);
+                }
+                if ((e = e.next) == null)
+                    return null;
+            }
+        }
+    }
+}
+
+static final class TreeBin<K,V> extends Node<K,V> {
+    TreeNode<K,V> root;
+    volatile TreeNode<K,V> first;
+    volatile int lockState;
+
+    static final int WRITER = 1; // set while holding write lock
+    static final int WAITER = 2; // set when waiting for write lock
+    static final int READER = 4; // increment value for setting read lock
+
+    TreeBin(TreeNode<K,V> b) {
+        super(TREEBIN, null, null, null);
+        this.first = b;
+        TreeNode<K,V> r = null;
+        // ***
+        this.root = r;
+        // ...
+    }
+
+    final Node<K,V> find(int h, Object k) {
+        if (k != null) {
+            //遍历first指针指向的双向链表
+            for (Node<K,V> e = first; e != null; ) {
+                int s; K ek;
+                //(WAITER|WRITER) -> 0010 | 0001 = 0011
+                //lockState & 0011 != 0 true -> 表示后两位不为0，说明有等待者线程 或 有写线程在加锁，需要从链表读取数据
+                if (((s = lockState) & (WAITER|WRITER)) != 0) {
+                    if (e.hash == h && ((ek = e.key) == k || (ek != null && k.equals(ek))))
+                        return e;
+                    //e指向下一个元素
+                    e = e.next;
+                }
+                //前置条件: 没有等待者线程 或 没有写线程
+                //true -> 添加读锁成功 读锁是共享锁 从红黑树中读取数据
+                else if (U.compareAndSwapInt(this, LOCKSTATE, s,
+                                                s + READER)) {
+                    TreeNode<K,V> r, p;
+                    try {
+                        //从根节点开始往下查找
+                        p = ((r = root) == null ? null : r.findTreeNode(h, k, null));
+                    } finally {
+                        //w: 表示等待者线程
+                        Thread w;
+                        //(READER|WAITER) -> 0100 | 0010 = 0110 => 6 表示当前有一个读线程和一个等待中的写线程
+                        //U.getAndAddInt(this, LOCKSTATE, -READER) 注意:这里是先get到LOCKSTATE的值与(READER|WAITER)对比后再 -4 释放读锁
+                        //当前线程为最后一个读线程
+                        //(w = waiter) != null true -> 有写线程在等待读操作全部结束
+                        if (U.getAndAddInt(this, LOCKSTATE, -READER) ==
+                            (READER|WAITER) && (w = waiter) != null)
+                            //唤醒等待中的写线程
+                            LockSupport.unpark(w);
+                    }
+                    return p;
+                }
+            }
+        }
+        return null;
+    }
+}
+
+static final class TreeNode<K,V> extends Node<K,V> {
+    TreeNode<K,V> parent;  // red-black tree links
+    TreeNode<K,V> left;
+    TreeNode<K,V> right;
+    TreeNode<K,V> prev;    // needed to unlink next upon deletion
+    boolean red;
+
+    TreeNode(int hash, K key, V val, Node<K,V> next,
+                TreeNode<K,V> parent) {
+        super(hash, key, val, next);
+        this.parent = parent;
+    }
+
+    Node<K,V> find(int h, Object k) {
+        return findTreeNode(h, k, null);
+    }
+
+    /**
+     * Returns the TreeNode (or null if not found) for the given key
+     * starting at given root.
+     */
+    final TreeNode<K,V> findTreeNode(int h, Object k, Class<?> kc) {
+        if (k != null) {
+            //游标节点 初始值为调用该方法的节点
+            TreeNode<K,V> p = this;
+            do  {
+                //ph: 当前游标节点的hash值
+                //dir: 待插入节点位于当前游标节点的 左边 或 右边
+                //pk: 当前游标节点的key
+                //q: 匹配到的节点
+                int ph, dir; K pk; TreeNode<K,V> q;
+                //pl: 当前游标节点的左子节点
+                //pr: 当前游标节点的右子节点
+                TreeNode<K,V> pl = p.left, pr = p.right;
+                // CASE1: 当前游标节点的hash值 > 待查找节点的hash值
+                if ((ph = p.hash) > h)
+                    p = pl;
+                // CASE2: 当前游标节点的hash值 < 待查找节点的hash值
+                else if (ph < h)
+                    p = pr;
+                // 前置条件: 当前游标节点的hash值 == 待查找节点的hash值
+                // CASE3: 当前游标节点的key == 待查找的节点的key，返回p
+                else if ((pk = p.key) == k || (pk != null && k.equals(pk)))
+                    return p;
+                //前置条件: 1、当前游标节点的hash值 == 待查找节点的hash值
+                //         2、当前游标节点的key != 待查找的节点的key
+                // CASE4: 当前游标节点的左子节点是null
+                else if (pl == null)
+                    p = pr;
+                //前置条件: 1、当前游标节点的hash值 == 待查找节点的hash值
+                //        2、当前游标节点的key != 待查找的节点的key
+                // CASE4: 当前游标节点的右子节点是null
+                else if (pr == null)
+                    p = pl;
+                //前置条件: 1、当前游标节点的hash值 == 待查找节点的hash值
+                //         2、当前游标节点的key != 待查找的节点的key
+                //         3、当前游标节点的左、右节点 != null
+                // CASE5: 获取待查找节点的key的class类型 并计算出dir
+                else if ((kc != null ||
+                            (kc = comparableClassFor(k)) != null) &&
+                            (dir = compareComparables(kc, k, pk)) != 0)
+                    p = (dir < 0) ? pl : pr;
+                //前置条件: 1、当前游标节点的hash值 == 待查找节点的hash值
+                //        2、当前游标节点的key != 待查找的节点的key
+                //        3、当前游标节点的左、右节点 != null
+                //        4、无法通过待查找节点key的class类型计算dir
+                // CASE6: 遍历当前游标节点的整个右子树
+                else if ((q = pr.findTreeNode(h, k, kc)) != null)
+                    return q;
+                //前置条件: 1、当前游标节点的hash值 == 待查找节点的hash值
+                //        2、当前游标节点的key != 待查找的节点的key
+                //        3、当前游标节点的左、右节点 != null
+                //        4、无法通过待查找节点key的class类型计算dir
+                //        5、遍历当前游标节点的整个右子树还是未找到
+                // CASE7: 从左子节点开始继续找
+                else
+                    p = pl;
+            } while (p != null);
+        }
+        return null;
+    }
+}
+```
+# ForkJoin
+
+# CountDownLatch
+
+# 同步屏障CyclicBarrier
+
+# 控制并发线程数的Semaphore
+
+# 线程池
 如果workercount < corePoolSize，则创建并启动一个线程来执行新提交的任务
 如果workercount >= corePoolSize，且线程池内的阻塞队列未满，则将任务添加到阻塞队列中
 如果workercount >= corePoolSize && workercount < maximumPoolSize，如果线程池内的阻塞队列已满，则创建并启动一个线程来执行新提交的任务
