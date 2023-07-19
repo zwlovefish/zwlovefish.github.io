@@ -31,12 +31,6 @@ yum list docker-ce --showduplicates | sort -r
 ```shell
 yum install docker-ce-<version> docker-ce-cli-<version> containerd.io
 ```
-### 开机启动docker
-```shell
-systemctl start docker
-systemctl enable docker
-```
-## 安装kubeadm
 ### 配置阿里云的yum源(由于使用google的yum源出现不能访问的情况)
 在/etc/yum.repo.d目录中新建一个kubernetes.repo的文件，内容如下：
 ```shell
@@ -55,7 +49,13 @@ gpgcheck=0：表示对从这个源下载的rpm包不进行校验
 repo_gpgcheck=0：某些安全性配置文件会在 /etc/yum.conf 内全面启用
 repo_gpgcheck，以便能检验软件库的中继数据的加密签署
 如果gpgcheck设为1，会进行校验，就会报错，所以这里设为0
-### 安装kubelet kubeadm kubectl
+
+### 开机启动docker
+```shell
+systemctl start docker
+systemctl enable docker
+```
+## 安装kubelet kubeadm kubectl
 ```shell
 yum install -y kubelet kubeadm kubectl
 ```
@@ -71,7 +71,7 @@ kubeadm还需要关闭linux的交换区
 sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 swapoff -a
 ```
-## 修改kubeadm的默认配置
+### 修改kubeadm的默认配置
 一些基础命令：
 
 init是初始化控制平面命令，join是加入结点命令
@@ -141,6 +141,11 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 
 <font color="red">tips：如果安装失败的可以删除/etc/kubernetes文件夹，在根据netstat(不会用的话，netstat -h查看，注意一下-p选项)依次删除占用的端口
 </font>
+
+### master也可以安装pod
+```shell
+kubectl taint node <node_name> node-role.kubernetes.io/master-
+```
 
 # 安装Node，并将Node加入到集群
 ```shell
