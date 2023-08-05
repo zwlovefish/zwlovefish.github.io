@@ -93,7 +93,7 @@ kubeadm config print init-defaults > init-default.yaml
 先配置国内镜像源，修改docker服务的配置文件(默认在/etc/docker/daemon.json，如果没有则新建)，地址是阿里云控制台->容器镜像服务->镜像工具->镜像加速器
 ```shell
 mkdir -p /etc/docker
-tee /etc/docker/daemon.json <<-'EOF'
+cat /etc/docker/daemon.json << EOF
 {
   "registry-mirrors": ["https://********.mirror.aliyuncs.com"]
 }
