@@ -195,7 +195,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-07-04 12:22:39" itemprop="dateModified" datetime="2023-07-04T12:22:39+08:00">2023-07-04</time>
+      <time title="修改时间：2023-08-05 14:07:27" itemprop="dateModified" datetime="2023-08-05T14:07:27+08:00">2023-08-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -218,36 +218,14 @@
     
     <div class="post-body" itemprop="articleBody">
           <h1 id="访问方法"><a href="#访问方法" class="headerlink" title="访问方法"></a>访问方法</h1><p>MySQL执行查询语句的方式称为访问方法或者访问类型。同一个查询语句可以使用多种不同访问方法来执行。</p>
-<h2 id="const"><a href="#const" class="headerlink" title="const"></a>const</h2><p>有时可以通过主键列来定位一条记录，如：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> single_table <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
-<p>MySQL会直接利用主键值在聚簇索引中定位对应的用户记录。与之类似，我们根据唯一索引来定位一条记录的速度也是贼快的，比如：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> single_table <span class="keyword">WHERE</span> key2<span class="operator">=</span><span class="number">2</span>;</span><br></pre></td></tr></table></figure>
-<p>这个查询执行可以分为两步：</p>
-<ol>
-<li>在uk_key对应的B+树索引中，根据key2列与常数的等值条件定位到一条二级索引记录。</li>
-<li>然后再根据该记录的id值到聚簇索引中获取到完整的用户记录。</li>
-</ol>
-<p>通过主键或者唯一二级索引列与常数的等值比较来定位一条记录是像火箭一样快的，所以他们把这种通过主键或者唯一二级索引列来定位一条记录的访问方法定义为const。这种const访问方法只能在主键或者唯一二级索引列与一个常数进行等值比较时才有效。如果主键或者唯一二级索引的索引由多个列构成，则只有在索引列中的每一个列都与常数进行等值比较时，这个const访问方法才有效</p>
-<p>对于唯一二级索引列来说，在查询列为NULL值时，情况比较特殊，如下：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> single_table <span class="keyword">WHERE</span> key2 <span class="keyword">IS</span> <span class="keyword">NULL</span></span><br></pre></td></tr></table></figure>
-<p>因为唯一二级索引列并不限制NULL值的数量，所以上述语名句可能访问到多条记录，也就是说上面这个语句不可以使用const访问方法来执行</p>
-<h2 id="ref"><a href="#ref" class="headerlink" title="ref"></a>ref</h2><h1 id="单表访问方法"><a href="#单表访问方法" class="headerlink" title="单表访问方法"></a>单表访问方法</h1><h1 id="连接的过程"><a href="#连接的过程" class="headerlink" title="连接的过程"></a>连接的过程</h1><p>两个表：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> t1 (m1 <span class="type">int</span>, n1 <span class="type">char</span>(<span class="number">1</span>))</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">Table</span> t2 (m2 <span class="type">int</span>, n2 <span class="type">char</span>(<span class="number">1</span>))</span><br></pre></td></tr></table></figure>
-<p>连接查询中的过滤条件可以分为下面两种：</p>
-<ol>
-<li>涉及单表的条件：这种只涉及单表的过滤条件。比如t1.m1 &gt; t1只针对t1表的过滤条件，t2.n2 &lt; ‘d’是只针对t2表的过滤条件。</li>
-<li>涉及两表的条件: 比如t1.m1&#x3D;t2.m2、t1.n1&gt;t2.n2等。</li>
-</ol>
-<p>携带过滤条件的连接查询的大致执行过程，比如下面的这个查询语句：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> t1,t2 <span class="keyword">WHERE</span> t1.m1 <span class="operator">=</span> t2.m2 <span class="keyword">AND</span> t2.n2 <span class="operator">&lt;</span> <span class="string">&#x27;d&#x27;</span>;</span><br></pre></td></tr></table></figure>
-
-<p>在这个查询中，我们指明了3个过滤条件：</p>
-<ol>
-<li>t1.m1 &gt; 1</li>
-<li>t1.m1 &#x3D; t2.m2</li>
-<li>t2.n1 &lt; ‘d’</li>
-</ol>
-
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/06/13/MySQL%E7%9A%84%E6%9F%A5%E8%AF%A2%E5%8E%9F%E7%90%86/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -632,7 +610,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-06-13 00:20:05" itemprop="dateModified" datetime="2023-06-13T00:20:05+08:00">2023-06-13</time>
+      <time title="修改时间：2023-08-05 14:07:27" itemprop="dateModified" datetime="2023-08-05T14:07:27+08:00">2023-08-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1027,7 +1005,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-05-18 22:35:21" itemprop="dateModified" datetime="2023-05-18T22:35:21+08:00">2023-05-18</time>
+      <time title="修改时间：2023-08-05 14:10:39" itemprop="dateModified" datetime="2023-08-05T14:10:39+08:00">2023-08-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
