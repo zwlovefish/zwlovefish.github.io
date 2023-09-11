@@ -502,7 +502,8 @@ private transient volatile Node<K,V>[] nextTable;
 // 表初始化或者扩容控制，默认值为0。
 // 当为-1时，表正在初始化，
 // 当为-(1+正在扩容的线程数)，表示正在扩容
-// 如果尚未进行初始化，那这个正数表示需要初始化的大小。初始化后，保存的时下一次扩容的大小。
+// 如果尚未进行初始化，那这个正数表示需要初始化的大小。
+// 初始化后，保存的时下一次扩容的大小。
 private transient volatile int sizeCtl;
 
 // 定义节点的hash值
@@ -875,6 +876,352 @@ static final class TreeNode<K,V> extends Node<K,V> {
     }
 }
 ```
+
+## put操作
+```java
+final V putVal(K key, V value, boolean onlyIfAbsent) {
+    // 防止二义性，get操作时不知道put操作的是null，还是这个值不存在
+    if (key == null || value == null) throw new NullPointerException();
+    int hash = spread(key.hashCode());
+    int binCount = 0; // 链表时表示该桶位上的节点有多少个，用于转红黑树，以及判断是否需要扩容
+    for (Node<K,V>[] tab = table;;) {
+        Node<K,V> f; int n, i, fh;
+        // f是桶位置上的元素
+        // n是table的长度
+        // i是桶位置
+        // fh是桶位置元素的hash值
+        if (tab == null || (n = tab.length) == 0)
+            // 如果table为空的话，就初始化table
+            tab = initTable();
+        else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+            // 如果桶位置为空的话，就使用cas设置元素到桶位置
+            if (casTabAt(tab, i, null,
+                            new Node<K,V>(hash, key, value, null)))
+                break;                   // no lock when adding to empty bin
+        }
+        else if ((fh = f.hash) == MOVED)
+            // 如果桶位置元素的hash值为MOVED，说明在进行扩容，该线程去帮助扩容
+            tab = helpTransfer(tab, f);
+        else {
+            // 锁桶位置，然后里面的使用cas设置值，如果链表大于8就转红黑树
+            V oldVal = null;
+            synchronized (f) {
+                if (tabAt(tab, i) == f) {
+                    if (fh >= 0) {
+                        // 普通的链表类型
+                        binCount = 1;
+                        
+                        for (Node<K,V> e = f;; ++binCount) {
+                            K ek;
+                            // hash相同，key也相同
+                            if (e.hash == hash 
+                                    && ((ek = e.key) == key 
+                                    || (ek != null && key.equals(ek)))) {
+                                oldVal = e.val;
+                                if (!onlyIfAbsent)
+                                    e.val = value;
+                                break;
+                            }
+                            Node<K,V> pred = e;
+                            // 这里采用的尾插
+                            if ((e = e.next) == null) {
+                                pred.next = new Node<K,V>(hash, key,
+                                                            value, null);
+                                break;
+                            }
+                        }
+                    }
+                    else if (f instanceof TreeBin) {
+                        // 红黑树类型
+                        Node<K,V> p;
+                        binCount = 2;
+                        if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key,
+                                                        value)) != null) {
+                            oldVal = p.val;
+                            if (!onlyIfAbsent)
+                                p.val = value;
+                        }
+                    }
+                }
+            }
+            if (binCount != 0) {
+                if (binCount >= TREEIFY_THRESHOLD)
+                    treeifyBin(tab, i);
+                // old有值就是覆盖，不需要后面计数了，直接返回
+                if (oldVal != null)
+                    return oldVal;
+                break;
+            }
+        }
+    }
+
+    // 使用LongAdder思想增加1
+    addCount(1L, binCount);
+    return null;
+}
+
+/**初始化table*/
+private final Node<K,V>[] initTable() {
+    Node<K,V>[] tab; int sc;
+    while ((tab = table) == null || tab.length == 0) {
+        if ((sc = sizeCtl) < 0) // 说明有其他线程正在初始化表格
+            Thread.yield(); // lost initialization race; just spin
+        else if (U.compareAndSwapInt(this, SIZECTL, sc, -1)) {
+            // 将SIZECTL设置为-1
+            try {
+                if ((tab = table) == null || tab.length == 0) {
+                    int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
+                    @SuppressWarnings("unchecked")
+                    Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
+                    table = tab = nt;
+                    // n - 0.25n = 0.75n，就算下一次扩容的大小
+                    sc = n - (n >>> 2); 
+                }
+            } finally {
+                sizeCtl = sc;
+            }
+            break;
+        }
+    }
+    return tab;
+}
+
+// 帮助扩容的函数
+// tab：表
+// f：桶位元素 
+final Node<K,V>[] helpTransfer(Node<K,V>[] tab, Node<K,V> f) {
+    Node<K,V>[] nextTab; int sc;
+    // 如果有线程在扩容时，会将该桶位元素设置为ForwardingNode，然后在转移元素
+    if (tab != null && (f instanceof ForwardingNode) &&
+        (nextTab = ((ForwardingNode<K,V>)f).nextTable) != null) {
+        int rs = resizeStamp(tab.length);
+        while (nextTab == nextTable && table == tab &&
+                (sc = sizeCtl) < 0) {
+            if ((sc >>> RESIZE_STAMP_SHIFT) != rs || sc == rs + 1 ||
+                sc == rs + MAX_RESIZERS || transferIndex <= 0)
+                break;
+            if (U.compareAndSwapInt(this, SIZECTL, sc, sc + 1)) {
+                transfer(tab, nextTab);
+                break;
+            }
+        }
+        return nextTab;
+    }
+    return table;
+}
+
+// 使用LongAdder思想增加1, putVal中调用addCount(1L, binCount);
+// 设置桶元素成功时，bitcount为0，即check为0
+// 设置链表时，链表下面有bitcount个元素，即这里的check为bitcount的个数，该bitcount必定大于等于2
+// 设置红黑树时，这里的bitcount为2，即check为2
+// remove和clear时，check为-1
+private final void addCount(long x, int check) {
+    CounterCell[] as; long b, s;
+    if ((as = counterCells) != null ||
+        !U.compareAndSwapLong(this, BASECOUNT, b = baseCount, s = b + x)) {
+        CounterCell a; long v; int m;
+        boolean uncontended = true;
+        if (as == null || (m = as.length - 1) < 0 
+                || (a = as[ThreadLocalRandom.getProbe() & m]) == null 
+                || !(uncontended = U.compareAndSwapLong(a, CELLVALUE, v = a.value, v + x))) {
+        /**当不得已走到fullAddCount()，这个方法是一定会修改元素个数成功的，但是成功就立刻退出整个addCount方法了，不再向后判断扩容？
+         * 个人猜想：
+         * 1. 假设走到fullAddCount是因为CounterCell[] as为空，那么外围的if，就是 cas 修改baseCount失败了，说明有其他线程修改成功了由它去检查是否扩容。
+         * 2. 假设走到fullAddCount是因为 cas 修改counterCell失败，说明有其他线程修改成功，则由它去检查扩容。
+         * 3. 既然都执行到fullAddCount，这个方法流程上还是比较复杂的，可能较为耗时，作者意图应该是不想让客户端调用时间太长，既然有其他线程去检查扩容了，当前线程就结束吧，不要让调用者等太久。*/
+            fullAddCount(x, uncontended);
+            return;
+        }
+        if (check <= 1)
+            return;
+        s = sumCount();
+    }
+    // 替换节点和清空数组时，check=-1，只做元素个数递减，不会触发扩容检查，也不会缩容
+    if (check >= 0) {
+        Node<K,V>[] tab, nt; int n, sc;
+        while (s >= (long)(sc = sizeCtl) && (tab = table) != null 
+                && (n = tab.length) < MAXIMUM_CAPACITY) {
+            // 1. 当总数大于阈值时；2. table部位null；3. table的长度小于最大值
+            int rs = resizeStamp(n);
+            if (sc < 0) {
+                // 参与扩容的线程干完了自己的活儿，重新检测发现还需要扩容
+                if ((sc >>> RESIZE_STAMP_SHIFT) != rs || sc == rs + 1 ||
+                    sc == rs + MAX_RESIZERS || (nt = nextTable) == null ||
+                    transferIndex <= 0)
+                    break;
+                if (U.compareAndSwapInt(this, SIZECTL, sc, sc + 1))
+                    transfer(tab, nt);
+            }
+            else if (U.compareAndSwapInt(this, SIZECTL, sc,
+                                            (rs << RESIZE_STAMP_SHIFT) + 2))
+                // 第一个扩容的线程走这里
+                transfer(tab, null);
+            s = sumCount();
+        }
+    }
+}
+
+/**
+ * n是table的长度
+ * 计算扩容时间戳
+ * 因为hashtable的长度必是2的n次方，所以记录一下2的n次方转为二进制后，1的前面有几个0即可确认table的长度了
+ * 前面一个是计算n的转为2进制后1的前面的0的个数，后面是一个是1左移16 - 1 = 15位，将其设置为负数
+ * 举例：前16位是table的长度，后16位是扩容的线程数
+ * resizeStamp(16) << 16        => 1000 0000 0001 1011 0000 0000 0000 0000 => -2145714176
+ * (resizeStamp(16) << 16) + 1  => 1000 0000 0001 1011 0000 0000 0000 0001 => -2145714175
+ * (resizeStamp(16) << 16) + 2  => 1000 0000 0001 1011 0000 0000 0000 0010 => -2145714174
+*/
+static final int resizeStamp(int n) {
+    return Integer.numberOfLeadingZeros(n) | (1 << (RESIZE_STAMP_BITS - 1));
+}
+```
+![扩容戳](扩容戳.png)
+
+```java
+/**扩容的过程*/ 
+private final void transfer(Node<K,V>[] tab, Node<K,V>[] nextTab) {
+    int n = tab.length, stride;
+    if ((stride = (NCPU > 1) ? (n >>> 3) / NCPU : n) < MIN_TRANSFER_STRIDE)
+        stride = MIN_TRANSFER_STRIDE; // subdivide range
+    if (nextTab == null) {            // initiating
+        try {
+            @SuppressWarnings("unchecked")
+            Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n << 1];
+            nextTab = nt;
+        } catch (Throwable ex) {      // try to cope with OOME
+            sizeCtl = Integer.MAX_VALUE;
+            return;
+        }
+        nextTable = nextTab;
+        transferIndex = n;
+    }
+    int nextn = nextTab.length;
+    ForwardingNode<K,V> fwd = new ForwardingNode<K,V>(nextTab);
+    // 判断当前桶位是否已经转移完毕
+    boolean advance = true;
+    boolean finishing = false; // to ensure sweep before committing nextTab
+    for (int i = 0, bound = 0;;) {
+        Node<K,V> f; int fh;
+        while (advance) {
+            int nextIndex, nextBound;
+            if (--i >= bound || finishing)
+                // 无论哪个线程第一次都不走这里， --0 >= 0都是false
+                advance = false;
+            else if ((nextIndex = transferIndex) <= 0) {
+                // 根据transferIndex获取当前线程需要从哪个index开始转移，如果<=0，说明已经分配完毕
+                i = -1;
+                advance = false;
+            }
+            else if (U.compareAndSwapInt
+                        (this, TRANSFERINDEX, nextIndex,
+                        nextBound = (nextIndex > stride ?
+                                    nextIndex - stride : 0))) {
+                // 设置transferIndex，其他线程根据这个标记位，分配自己需要执行的任务
+                bound = nextBound;
+                // 根据transferIndex - 1设置i，即从第i个位置开始转移
+                i = nextIndex - 1;
+                advance = false;
+            }
+        }
+        if (i < 0 || i >= n || i + n >= nextn) {
+            // 当前线程分配的任务结束
+            int sc;
+            if (finishing) {
+                nextTable = null;
+                table = nextTab;
+                sizeCtl = (n << 1) - (n >>> 1);
+                return;
+            }
+            if (U.compareAndSwapInt(this, SIZECTL, sc = sizeCtl, sc - 1)) {
+                if ((sc - 2) != resizeStamp(n) << RESIZE_STAMP_SHIFT)
+                    return;
+                finishing = advance = true;
+                i = n; // recheck before commit
+            }
+        }
+        else if ((f = tabAt(tab, i)) == null)
+            // 设置桶位元素
+            advance = casTabAt(tab, i, null, fwd);
+        else if ((fh = f.hash) == MOVED)
+            // 当前桶位被标记位 MOVED
+            advance = true; // already processed
+        else {
+            // 转移桶位元素
+            synchronized (f) {
+                if (tabAt(tab, i) == f) {
+                    Node<K,V> ln, hn;
+                    if (fh >= 0) {
+                        int runBit = fh & n;
+                        Node<K,V> lastRun = f;
+                        for (Node<K,V> p = f.next; p != null; p = p.next) {
+                            int b = p.hash & n;
+                            if (b != runBit) {
+                                runBit = b;
+                                lastRun = p;
+                            }
+                        }
+                        if (runBit == 0) {
+                            ln = lastRun;
+                            hn = null;
+                        }
+                        else {
+                            hn = lastRun;
+                            ln = null;
+                        }
+                        for (Node<K,V> p = f; p != lastRun; p = p.next) {
+                            int ph = p.hash; K pk = p.key; V pv = p.val;
+                            if ((ph & n) == 0)
+                                ln = new Node<K,V>(ph, pk, pv, ln);
+                            else
+                                hn = new Node<K,V>(ph, pk, pv, hn);
+                        }
+                        setTabAt(nextTab, i, ln);
+                        setTabAt(nextTab, i + n, hn);
+                        setTabAt(tab, i, fwd);
+                        advance = true;
+                    }
+                    else if (f instanceof TreeBin) {
+                        TreeBin<K,V> t = (TreeBin<K,V>)f;
+                        TreeNode<K,V> lo = null, loTail = null;
+                        TreeNode<K,V> hi = null, hiTail = null;
+                        int lc = 0, hc = 0;
+                        for (Node<K,V> e = t.first; e != null; e = e.next) {
+                            int h = e.hash;
+                            TreeNode<K,V> p = new TreeNode<K,V>
+                                (h, e.key, e.val, null, null);
+                            if ((h & n) == 0) {
+                                if ((p.prev = loTail) == null)
+                                    lo = p;
+                                else
+                                    loTail.next = p;
+                                loTail = p;
+                                ++lc;
+                            }
+                            else {
+                                if ((p.prev = hiTail) == null)
+                                    hi = p;
+                                else
+                                    hiTail.next = p;
+                                hiTail = p;
+                                ++hc;
+                            }
+                        }
+                        ln = (lc <= UNTREEIFY_THRESHOLD) ? untreeify(lo) :
+                            (hc != 0) ? new TreeBin<K,V>(lo) : t;
+                        hn = (hc <= UNTREEIFY_THRESHOLD) ? untreeify(hi) :
+                            (lc != 0) ? new TreeBin<K,V>(hi) : t;
+                        setTabAt(nextTab, i, ln);
+                        setTabAt(nextTab, i + n, hn);
+                        setTabAt(tab, i, fwd);
+                        advance = true;
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
 # ForkJoin
 
 # CountDownLatch
