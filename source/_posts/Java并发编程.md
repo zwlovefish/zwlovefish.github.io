@@ -1221,7 +1221,218 @@ private final void transfer(Node<K,V>[] tab, Node<K,V>[] nextTab) {
     }
 }
 ```
+## remove操作
+```java
+public V remove(Object key) {
+    return replaceNode(key, null, null);
+}
 
+final V replaceNode(Object key, V value, Object cv) {
+    int hash = spread(key.hashCode());
+    for (Node<K,V>[] tab = table;;) {
+        Node<K,V> f; int n, i, fh;
+        // f是table的桶位元素，n是table的长度，i是桶位置，fh是桶位元素的hash值
+        if (tab == null || (n = tab.length) == 0 ||
+            (f = tabAt(tab, i = (n - 1) & hash)) == null)
+            break;
+        else if ((fh = f.hash) == MOVED)
+            // 辅助扩容，完毕之后，循环到下次，在执行remove操作
+            tab = helpTransfer(tab, f);
+        else {
+            V oldVal = null;
+            boolean validated = false;
+            synchronized (f) { // 锁住桶位元素
+                if (tabAt(tab, i) == f) {
+                    if (fh >= 0) { // 说明是普通链表
+                        validated = true;
+                        for (Node<K,V> e = f, pred = null;;) {
+                            // 普通节点remove
+                            K ek;
+                            if (e.hash == hash &&
+                                ((ek = e.key) == key ||
+                                    (ek != null && key.equals(ek)))) {
+                                V ev = e.val;
+                                if (cv == null || cv == ev ||
+                                    (ev != null && cv.equals(ev))) {
+                                    oldVal = ev;
+                                    if (value != null)
+                                        e.val = value;
+                                    else if (pred != null)
+                                        pred.next = e.next;
+                                    else
+                                        setTabAt(tab, i, e.next);
+                                }
+                                break;
+                            }
+                            pred = e;
+                            if ((e = e.next) == null)
+                                break;
+                        }
+                    }
+                    else if (f instanceof TreeBin) {
+                        // 树节点remove
+                        validated = true;
+                        TreeBin<K,V> t = (TreeBin<K,V>)f;
+                        TreeNode<K,V> r, p;
+                        if ((r = t.root) != null &&
+                            (p = r.findTreeNode(hash, key, null)) != null) {
+                            V pv = p.val;
+                            if (cv == null || cv == pv ||
+                                (pv != null && cv.equals(pv))) {
+                                oldVal = pv;
+                                if (value != null)
+                                    p.val = value;
+                                else if (t.removeTreeNode(p))
+                                    setTabAt(tab, i, untreeify(t.first));
+                            }
+                        }
+                    }
+                }
+            }
+            if (validated) {
+                if (oldVal != null) {
+                    if (value == null)
+                        // 总数 - 1 
+                        addCount(-1L, -1);
+                    return oldVal;
+                }
+                break;
+            }
+        }
+    }
+    return null;
+}
+
+final boolean removeTreeNode(TreeNode<K,V> p) {
+    TreeNode<K,V> next = (TreeNode<K,V>)p.next;
+    TreeNode<K,V> pred = p.prev;  // unlink traversal pointers
+    TreeNode<K,V> r, rl;
+    if (pred == null)
+        first = next;
+    else
+        pred.next = next;
+    if (next != null)
+        next.prev = pred;
+    if (first == null) {
+        root = null;
+        return true;
+    }
+    if ((r = root) == null || r.right == null || // too small
+        (rl = r.left) == null || rl.left == null)
+        return true;
+    lockRoot();
+    try {
+        TreeNode<K,V> replacement;
+        TreeNode<K,V> pl = p.left;
+        TreeNode<K,V> pr = p.right;
+        if (pl != null && pr != null) {
+            TreeNode<K,V> s = pr, sl;
+            while ((sl = s.left) != null) // find successor
+                s = sl;
+            boolean c = s.red; s.red = p.red; p.red = c; // swap colors
+            TreeNode<K,V> sr = s.right;
+            TreeNode<K,V> pp = p.parent;
+            if (s == pr) { // p was s's direct parent
+                p.parent = s;
+                s.right = p;
+            }
+            else {
+                TreeNode<K,V> sp = s.parent;
+                if ((p.parent = sp) != null) {
+                    if (s == sp.left)
+                        sp.left = p;
+                    else
+                        sp.right = p;
+                }
+                if ((s.right = pr) != null)
+                    pr.parent = s;
+            }
+            p.left = null;
+            if ((p.right = sr) != null)
+                sr.parent = p;
+            if ((s.left = pl) != null)
+                pl.parent = s;
+            if ((s.parent = pp) == null)
+                r = s;
+            else if (p == pp.left)
+                pp.left = s;
+            else
+                pp.right = s;
+            if (sr != null)
+                replacement = sr;
+            else
+                replacement = p;
+        }
+        else if (pl != null)
+            replacement = pl;
+        else if (pr != null)
+            replacement = pr;
+        else
+            replacement = p;
+        if (replacement != p) {
+            TreeNode<K,V> pp = replacement.parent = p.parent;
+            if (pp == null)
+                r = replacement;
+            else if (p == pp.left)
+                pp.left = replacement;
+            else
+                pp.right = replacement;
+            p.left = p.right = p.parent = null;
+        }
+
+        // 红黑树的重新平衡
+        root = (p.red) ? r : balanceDeletion(r, replacement);
+
+        if (p == replacement) {  // detach pointers
+            TreeNode<K,V> pp;
+            if ((pp = p.parent) != null) {
+                if (p == pp.left)
+                    pp.left = null;
+                else if (p == pp.right)
+                    pp.right = null;
+                p.parent = null;
+            }
+        }
+    } finally {
+        unlockRoot();
+    }
+    assert checkInvariants(root);
+    return false;
+}
+
+private final void lockRoot() {
+    if (!U.compareAndSwapInt(this, LOCKSTATE, 0, WRITER))
+        contendedLock(); // offload to separate method
+}
+
+/**
+ * Releases write lock for tree restructuring.
+ */
+private final void unlockRoot() {
+    lockState = 0;
+}
+
+private final void contendedLock() {
+    boolean waiting = false;
+    for (int s;;) {
+        if (((s = lockState) & ~WAITER) == 0) {
+            if (U.compareAndSwapInt(this, LOCKSTATE, s, WRITER)) {
+                if (waiting)
+                    waiter = null;
+                return;
+            }
+        }
+        else if ((s & WAITER) == 0) {
+            if (U.compareAndSwapInt(this, LOCKSTATE, s, s | WAITER)) {
+                waiting = true;
+                waiter = Thread.currentThread();
+            }
+        }
+        else if (waiting)
+            LockSupport.park(this);
+    }
+}
+```
 # ForkJoin
 
 # CountDownLatch
