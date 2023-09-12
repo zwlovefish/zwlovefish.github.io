@@ -1227,6 +1227,7 @@ public V remove(Object key) {
     return replaceNode(key, null, null);
 }
 
+// 真正执行删除的动作
 final V replaceNode(Object key, V value, Object cv) {
     int hash = spread(key.hashCode());
     for (Node<K,V>[] tab = table;;) {
