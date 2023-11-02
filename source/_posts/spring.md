@@ -164,7 +164,7 @@ ApplicationContext容器中，Bean的生命周期流程如上图所示，流程�
 2. JDK动态代理
 3. CGLIB
 
-# springmvn工作流程
+# springmvc工作流程
 ![springmvc流程](springmvc流程.png)
 1. 用户发送请求至前端控制器DispatcherServlet。
 2. DispatcherServlet收到请求调用HandlerMapping处理器映射器。
