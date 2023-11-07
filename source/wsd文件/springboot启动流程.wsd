@@ -1,0 +1,161 @@
+@startuml springboot启动流程
+start
+:SpringApplication.run(DrawingBedOSSApplication.class, args);
+:public ConfigurableApplicationContext run(String... args);
+:DefaultBootstrapContext bootstrapContext = createBootstrapContext();
+note right
+// 这里会执行一次实现了BootstrapRegistryInitializer接口的方法
+private DefaultBootstrapContext createBootstrapContext() {
+    DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
+    this.bootstrapRegistryInitializers.forEach((initializer) -> initializer.initialize(bootstrapContext));
+    return bootstrapContext;
+}
+endnote
+:configureHeadlessProperty();
+note right
+配置java.awt.headless属性为TRUE
+endnote
+:SpringApplicationRunListeners listeners = getRunListeners(args);
+note right
+List<SpringApplicationRunListener> listeners = 
+getSpringFactoriesInstances(SpringApplicationRunListener.class, argumentResolver);
+用来在整个启动流程中接受不同执行点事件通知的监听者，
+SpringApplicationRunListener接口规定了SpringBoot的生命周期，
+在各个生命周期广播相应的事件，调用实际的ApplicationListener类
+endnote
+:ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);\nConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
+note right
+1. 将应用的args封装成ApplicationArguments，然后准备环境。
+2. 调用getOrCreateEnvironment
+ConfigurableEnvironment environment = getOrCreateEnvironment();
+3. SpringApplication中applicationContextFactory = ApplicationContextFactory.DEFAULT
+4. ApplicationContextFactory DEFAULT = new DefaultApplicationContextFactory()
+private ConfigurableEnvironment getOrCreateEnvironment() {
+    if (this.environment != null) {
+        return this.environment;
+    }
+    ConfigurableEnvironment environment = this.applicationContextFactory.createEnvironment(this.webApplicationType);
+    if (environment == null && this.applicationContextFactory != ApplicationContextFactory.DEFAULT) {
+        environment = ApplicationContextFactory.DEFAULT.createEnvironment(this.webApplicationType);
+    }
+    return (environment != null) ? environment : new ApplicationEnvironment();
+}
+5. DEFAULT中createEnvironment函数是根据Spring的SPI机制从类路径中获取ApplicationContextFactory
+这个ApplicationContextFactory有两个：ServletWebServerApplicationContextFactory和ReactiveWebServerApplicationContextFactory
+public ConfigurableEnvironment createEnvironment(WebApplicationType webApplicationType) {
+    return getFromSpringFactories(webApplicationType, ApplicationContextFactory::createEnvironment, null);
+}
+6. 根据webApplicationType类型是SERVLET返回的是ServletWebServerApplicationContextFactory中的创建环境
+private <T> T getFromSpringFactories(WebApplicationType webApplicationType,
+        BiFunction<ApplicationContextFactory, WebApplicationType, T> action, Supplier<T> defaultResult) {
+    for (ApplicationContextFactory candidate : SpringFactoriesLoader.loadFactories(ApplicationContextFactory.class,
+            getClass().getClassLoader())) {
+        T result = action.apply(candidate, webApplicationType);
+        if (result != null) {
+            return result;
+        }
+    }
+    return (defaultResult != null) ? defaultResult.get() : null;
+}
+7. ServletWebServerApplicationContextFactory中执行：
+public ConfigurableEnvironment createEnvironment(WebApplicationType webApplicationType) {
+    return (webApplicationType != WebApplicationType.SERVLET) ? null : new ApplicationServletEnvironment();
+}
+endnote
+:Banner printedBanner = printBanner(environment);
+note right
+打印springboot图标
+endnote
+:context = createApplicationContext();
+note right
+1. SpringApplication中applicationContextFactory = ApplicationContextFactory.DEFAULT
+2. ApplicationContextFactory DEFAULT = new DefaultApplicationContextFactory()
+protected ConfigurableApplicationContext createApplicationContext() {
+    return this.applicationContextFactory.create(this.webApplicationType);
+}
+3. DEFAULT中create函数是根据Spring的SPI机制从类路径中获取ApplicationContextFactory
+public ConfigurableApplicationContext create(WebApplicationType webApplicationType) {
+    try {
+        return getFromSpringFactories(webApplicationType, ApplicationContextFactory::create,
+                this::createDefaultApplicationContext);
+    }
+    catch (Exception ex) {
+        throw new IllegalStateException("Unable create a default ApplicationContext instance, "
+                + "you may need a custom ApplicationContextFactory", ex);
+    }
+}
+4. 根据webApplicationType类型是SERVLET返回的是在ServletWebServerApplicationContextFactory中创建的context
+private <T> T getFromSpringFactories(WebApplicationType webApplicationType,
+        BiFunction<ApplicationContextFactory, WebApplicationType, T> action, Supplier<T> defaultResult) {
+    for (ApplicationContextFactory candidate : SpringFactoriesLoader.loadFactories(ApplicationContextFactory.class,
+            getClass().getClassLoader())) {
+        T result = action.apply(candidate, webApplicationType);
+        if (result != null) {
+            return result;
+        }
+    }
+    return (defaultResult != null) ? defaultResult.get() : null;
+}
+
+public ConfigurableApplicationContext create(WebApplicationType webApplicationType) {
+    return (webApplicationType != WebApplicationType.SERVLET) ? null : createContext();
+}
+5. 创建的是AnnotationConfigServletWebServerApplicationContext
+private ConfigurableApplicationContext createContext() {
+    if (!AotDetector.useGeneratedArtifacts()) {
+        return new AnnotationConfigServletWebServerApplicationContext();
+    }
+    return new ServletWebServerApplicationContext();
+}
+endnote
+:prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+note left
+1. context.setEnvironment(environment);
+2. applyInitializers(context);这里执行实现了ApplicationContextInitializer接口的方法
+3. 如果启用了懒加载的话，设置懒加载的beanfactory后置处理器：
+context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
+4. 设置BeanFactory的后置处理器：context.addBeanFactoryPostProcessor(new PropertySourceOrderingBeanFactoryPostProcessor(context));
+endnote
+:refreshContext(context);
+note right
+private void refreshContext(ConfigurableApplicationContext context) {
+    if (this.registerShutdownHook) {
+        shutdownHook.registerApplicationContext(context);
+    }
+    refresh(context);
+}
+protected void refresh(ConfigurableApplicationContext applicationContext) {
+    applicationContext.refresh();
+}
+由上文可知，创建的是AnnotationConfigServletWebServerApplicationContext，该context继承了ServletWebServerApplicationContext
+所以实际执行的是ServletWebServerApplicationContext中的reshresh方法
+public final void refresh() throws BeansException, IllegalStateException {
+    try {
+        super.refresh();
+    }
+    catch (RuntimeException ex) {
+        WebServer webServer = this.webServer;
+        if (webServer != null) {
+            webServer.stop();
+        }
+        throw ex;
+    }
+}
+endnote
+:afterRefresh(context, applicationArguments);
+:callRunners(context, applicationArguments);
+note right
+// 执行Runners,先执行ApplicationRunner，后执行CommandLineRunner
+private void callRunners(ApplicationContext context, ApplicationArguments args) {
+    context.getBeanProvider(Runner.class).orderedStream().forEach((runner) -> {
+        if (runner instanceof ApplicationRunner applicationRunner) {
+            callRunner(applicationRunner, args);
+        }
+        if (runner instanceof CommandLineRunner commandLineRunner) {
+            callRunner(commandLineRunner, args);
+        }
+    });
+}
+endnote
+end
+@enduml
