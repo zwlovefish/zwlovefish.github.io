@@ -1,7 +1,8 @@
 ---
 title: SpringBoot学习
 date: 2023-11-07 15:24:29
-tags: SpringBoot
+tags: SpringBoot启动流程
+categories: SpringBoot
 ---
 
 # 应用程序入口

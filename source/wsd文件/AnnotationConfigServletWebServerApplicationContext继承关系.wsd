@@ -1,0 +1,32 @@
+@startuml AnnotationConfigServletWebServerApplicationContext继承关系图
+interface WebServerApplicationContext extends ApplicationContext
+interface ConfigurableApplicationContext extends ApplicationContext, Lifecycle, Closeable
+interface ConfigurableWebServerApplicationContext extends ConfigurableApplicationContext, WebServerApplicationContext
+interface WebApplicationContext extends ApplicationContext
+interface ConfigurableWebApplicationContext extends WebApplicationContext, ConfigurableApplicationContext
+abstract class AbstractApplicationContext extends DefaultResourceLoader implements ConfigurableApplicationContext {
+    #void prepareRefresh()
+    #ConfigurableListableBeanFactory obtainFreshBeanFactory()
+    #abstract void refreshBeanFactory()
+    #abstract ConfigurableListableBeanFactory getBeanFactory()
+    #void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
+    #void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory)
+    +void refresh()
+}
+class GenericApplicationContext extends AbstractApplicationContext {
+    #void initPropertySources()
+    #final void refreshBeanFactory()
+}
+class GenericWebApplicationContext extends GenericApplicationContext implements ConfigurableWebApplicationContext {
+    #void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
+}
+
+class ServletWebServerApplicationContext extends GenericWebApplicationContext implements ConfigurableWebServerApplicationContext {
+    #void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
+}
+
+class AnnotationConfigServletWebServerApplicationContext extends ServletWebServerApplicationContext implements AnnotationConfigRegistry {
+    #void prepareRefresh()
+    #void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
+}
+@enduml
