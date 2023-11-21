@@ -1,0 +1,8 @@
+@startuml BeanFactoryPostProcessor接口相关
+interface BeanFactoryPostProcessor {
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException;
+}
+interface BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor {
+	void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException;
+}
+@enduml
