@@ -599,4 +599,416 @@ public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
 总结一点就是，经过ConfigurationClassPostProcessor和MapperScannerConfigurer的处理，我们的DefaultListableBeanFactory的beanDefinitionMap中已经拥有了应用程序中的静态BeanDefinition(可能不是全部，比如程序动态添加)。
 >https://blog.csdn.net/J080624/article/details/54345467
 
-# registerBeanPostProcessors(beanFactory);
+# registerBeanPostProcessors(beanFactory)
+本方法会注册所有的 BeanPostProcessor，将所有实现了 BeanPostProcessor 接口的类加载到 BeanFactory 中。
+
+```java
+// BeanPostProcessor接口定义
+interface BeanPostProcessor {
+
+	@Nullable
+	default Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		return bean;
+	}
+
+	@Nullable
+	default Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		return bean;
+	}
+}
+
+// 调用函数开始
+protected void registerBeanPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+    PostProcessorRegistrationDelegate.registerBeanPostProcessors(beanFactory, this);
+}
+
+public static void registerBeanPostProcessors(
+        ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
+
+    // 找到BeanPostProcessor，然后按照PriorityOrdered、Ordered、其他常规的BeanPostProcessor、内部BeanPostProcessor顺序依次注册
+    String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
+
+    // Register BeanPostProcessorChecker that logs an info message when
+    // a bean is created during BeanPostProcessor instantiation, i.e. when
+    // a bean is not eligible for getting processed by all BeanPostProcessors.
+    int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
+    
+    beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
+
+    List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
+    List<BeanPostProcessor> internalPostProcessors = new ArrayList<>();
+    List<String> orderedPostProcessorNames = new ArrayList<>();
+    List<String> nonOrderedPostProcessorNames = new ArrayList<>();
+    for (String ppName : postProcessorNames) {
+        if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+            BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+            priorityOrderedPostProcessors.add(pp);
+            if (pp instanceof MergedBeanDefinitionPostProcessor) {
+                internalPostProcessors.add(pp);
+            }
+        }
+        else if (beanFactory.isTypeMatch(ppName, Ordered.class)) {
+            orderedPostProcessorNames.add(ppName);
+        }
+        else {
+            nonOrderedPostProcessorNames.add(ppName);
+        }
+    }
+
+    // First, register the BeanPostProcessors that implement PriorityOrdered.
+    sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
+    registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
+
+    // Next, register the BeanPostProcessors that implement Ordered.
+    List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>(orderedPostProcessorNames.size());
+    for (String ppName : orderedPostProcessorNames) {
+        BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+        orderedPostProcessors.add(pp);
+        if (pp instanceof MergedBeanDefinitionPostProcessor) {
+            internalPostProcessors.add(pp);
+        }
+    }
+    sortPostProcessors(orderedPostProcessors, beanFactory);
+    registerBeanPostProcessors(beanFactory, orderedPostProcessors);
+
+    // Now, register all regular BeanPostProcessors.
+    List<BeanPostProcessor> nonOrderedPostProcessors = new ArrayList<>(nonOrderedPostProcessorNames.size());
+    for (String ppName : nonOrderedPostProcessorNames) {
+        BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+        nonOrderedPostProcessors.add(pp);
+        if (pp instanceof MergedBeanDefinitionPostProcessor) {
+            internalPostProcessors.add(pp);
+        }
+    }
+    registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
+
+    // Finally, re-register all internal BeanPostProcessors.
+    sortPostProcessors(internalPostProcessors, beanFactory);
+    registerBeanPostProcessors(beanFactory, internalPostProcessors);
+
+    // Re-register post-processor for detecting inner beans as ApplicationListeners,
+    // moving it to the end of the processor chain (for picking up proxies etc).
+    beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
+}
+
+// 将BeanPostProcessors添加到beanFacotry中
+private static void registerBeanPostProcessors(
+        ConfigurableListableBeanFactory beanFactory, List<BeanPostProcessor> postProcessors) {
+
+    if (beanFactory instanceof AbstractBeanFactory) {
+        // Bulk addition is more efficient against our CopyOnWriteArrayList there
+        ((AbstractBeanFactory) beanFactory).addBeanPostProcessors(postProcessors);
+    }
+    else {
+        for (BeanPostProcessor postProcessor : postProcessors) {
+            beanFactory.addBeanPostProcessor(postProcessor);
+        }
+    }
+}
+```
+# initMessageSource()
+MessageSource 是用来处理国际化的，该方法将会初始化MessageSource并尝试设置parentMessageSource，然后作为单例bean注册到容器中
+
+```java
+protected void initMessageSource() {
+    ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+    if (beanFactory.containsLocalBean(MESSAGE_SOURCE_BEAN_NAME)) {
+        this.messageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME, MessageSource.class);
+        // Make MessageSource aware of parent MessageSource.
+        if (this.parent != null && this.messageSource instanceof HierarchicalMessageSource) {
+            HierarchicalMessageSource hms = (HierarchicalMessageSource) this.messageSource;
+            if (hms.getParentMessageSource() == null) {
+                // Only set parent context as parent MessageSource if no parent MessageSource
+                // registered already.
+                hms.setParentMessageSource(getInternalParentMessageSource());
+            }
+        }
+        if (logger.isTraceEnabled()) {
+            logger.trace("Using MessageSource [" + this.messageSource + "]");
+        }
+    }
+    else {
+        // Use empty MessageSource to be able to accept getMessage calls.
+        // 默认设置的国际化MessageSource就是走的这里
+        DelegatingMessageSource dms = new DelegatingMessageSource();
+        dms.setParentMessageSource(getInternalParentMessageSource());
+        this.messageSource = dms;
+        // public static final String MESSAGE_SOURCE_BEAN_NAME = "messageSource";
+        beanFactory.registerSingleton(MESSAGE_SOURCE_BEAN_NAME, this.messageSource);
+        if (logger.isTraceEnabled()) {
+            logger.trace("No '" + MESSAGE_SOURCE_BEAN_NAME + "' bean, using [" + this.messageSource + "]");
+        }
+    }
+}
+```
+# initApplicationEventMulticaster()
+初始化事件监听多路广播器
+```java
+protected void initApplicationEventMulticaster() {
+    // public static final String APPLICATION_EVENT_MULTICASTER_BEAN_NAME = "applicationEventMulticaster";
+    // //获取Bean工厂，一般为DefaultListBeanFactory
+    ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+    // beanFactory中如果有applicationEventMulticaster的则获取该实例
+    if (beanFactory.containsLocalBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME)) {
+        this.applicationEventMulticaster =
+                beanFactory.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, ApplicationEventMulticaster.class);
+        if (logger.isTraceEnabled()) {
+            logger.trace("Using ApplicationEventMulticaster [" + this.applicationEventMulticaster + "]");
+        }
+    }
+    else {
+        // BeanFactory中如果没有applicationEventMulticaster，则新建一个SimpleApplicationEventMulticaster
+        // 然后将其注册到BeanFactory中
+        // 其中SimpleApplicationEventMulticaster继承了AbstractApplicationEventMulticaster抽象类，而这个抽象类实现了aplicationEventMulticaster接口
+        this.applicationEventMulticaster = new SimpleApplicationEventMulticaster(beanFactory);
+        beanFactory.registerSingleton(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, this.applicationEventMulticaster);
+        if (logger.isTraceEnabled()) {
+            logger.trace("No '" + APPLICATION_EVENT_MULTICASTER_BEAN_NAME + "' bean, using " +
+                    "[" + this.applicationEventMulticaster.getClass().getSimpleName() + "]");
+        }
+    }
+}
+```
+# onRefresh()
+这个方法是模板方法，具体的子类可以在这里初始化一些特殊的 Bean（在初始化 singleton beans 之前）
+```java
+// AbstractApplicationContext.java
+protected void onRefresh() throws BeansException {
+    // For subclasses: do nothing by default.
+}
+
+// ServletWebServerApplicationContext.java
+@Override
+protected void onRefresh() {
+    super.onRefresh();
+    try {
+        createWebServer();
+    }
+    catch (Throwable ex) {
+        throw new ApplicationContextException("Unable to start web server", ex);
+    }
+}
+
+// GenericWebApplicationContext.java
+protected void onRefresh() {
+    this.themeSource = UiApplicationContextUtils.initThemeSource(this);
+}
+```
+可以看出在ServletWebServerApplicationContext中首先调用了其父类GenericWebApplicationContext的onRefresh方法，然后调用自身的onRefresh方法。
+先走父类的initThemeSource方法，然后执行创建webserver
+```java
+public static ThemeSource initThemeSource(ApplicationContext context) {
+    // public static final String THEME_SOURCE_BEAN_NAME = "themeSource";
+    // 如果有themeSource的话则获取该bean
+    if (context.containsLocalBean(THEME_SOURCE_BEAN_NAME)) {
+        ThemeSource themeSource = context.getBean(THEME_SOURCE_BEAN_NAME, ThemeSource.class);
+        // Make ThemeSource aware of parent ThemeSource.
+        if (context.getParent() instanceof ThemeSource && themeSource instanceof HierarchicalThemeSource) {
+            HierarchicalThemeSource hts = (HierarchicalThemeSource) themeSource;
+            if (hts.getParentThemeSource() == null) {
+                // Only set parent context as parent ThemeSource if no parent ThemeSource
+                // registered already.
+                hts.setParentThemeSource((ThemeSource) context.getParent());
+            }
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Using ThemeSource [" + themeSource + "]");
+        }
+        return themeSource;
+    }
+    else {
+        // Use default ThemeSource to be able to accept getTheme calls, either
+        // delegating to parent context's default or to local ResourceBundleThemeSource.
+        // 新建一个themeSource
+        HierarchicalThemeSource themeSource = null;
+        if (context.getParent() instanceof ThemeSource) {
+            themeSource = new DelegatingThemeSource();
+            themeSource.setParentThemeSource((ThemeSource) context.getParent());
+        }
+        else {
+            themeSource = new ResourceBundleThemeSource();
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Unable to locate ThemeSource with name '" + THEME_SOURCE_BEAN_NAME +
+                    "': using default [" + themeSource + "]");
+        }
+        return themeSource;
+    }
+}
+
+private void createWebServer() {
+    WebServer webServer = this.webServer;
+    ServletContext servletContext = getServletContext();
+    if (webServer == null && servletContext == null) {
+        // springboot启动时在这里创建webserver
+        StartupStep createWebServer = this.getApplicationStartup().start("spring.boot.webserver.create");
+        // 从BeanFactory中获取ServletWebServerFactory
+        ServletWebServerFactory factory = getWebServerFactory();
+        createWebServer.tag("factory", factory.getClass().toString());
+        // 本文以TomcatServletWebServerFactory为例：调用TomcatServletWebServerFactory中的getWebServer创建tomcat服务器
+        this.webServer = factory.getWebServer(getSelfInitializer());
+        createWebServer.end();
+        // 向BeanFactory注册webserver的生命周期的类
+        getBeanFactory().registerSingleton("webServerGracefulShutdown", new WebServerGracefulShutdownLifecycle(this.webServer));
+        getBeanFactory().registerSingleton("webServerStartStop", new WebServerStartStopLifecycle(this, this.webServer));
+    }
+    else if (servletContext != null) {
+        try {
+            getSelfInitializer().onStartup(servletContext);
+        }
+        catch (ServletException ex) {
+            throw new ApplicationContextException("Cannot initialize servlet context", ex);
+        }
+    }
+    // 这里，tomcat开始已经运行
+    initPropertySources();
+}
+
+// 从BeanFactory中获取ServletWebServerFactory
+protected ServletWebServerFactory getWebServerFactory() {
+    // Use bean names so that we don't consider the hierarchy
+    String[] beanNames = getBeanFactory().getBeanNamesForType(ServletWebServerFactory.class);
+    if (beanNames.length == 0) {
+        throw new MissingWebServerFactoryBeanException(getClass(), ServletWebServerFactory.class,
+                WebApplicationType.SERVLET);
+    }
+    if (beanNames.length > 1) {
+        throw new ApplicationContextException("Unable to start ServletWebServerApplicationContext due to multiple "
+                + "ServletWebServerFactory beans : " + StringUtils.arrayToCommaDelimitedString(beanNames));
+    }
+    return getBeanFactory().getBean(beanNames[0], ServletWebServerFactory.class);
+}
+```
+ServletWebServerFactory类图：
+![WebServerFactory](WebServerFactory.png)
+以下为上文的TomcatServletWebServerFactory中的getWebServer
+```java
+public WebServer getWebServer(ServletContextInitializer... initializers) {
+    if (this.disableMBeanRegistry) {
+        Registry.disableRegistry();
+    }
+    // 创建Tomcat类
+    Tomcat tomcat = new Tomcat();
+    // 设置baseDir
+    File baseDir = (this.baseDirectory != null) ? this.baseDirectory : createTempDir("tomcat");
+    tomcat.setBaseDir(baseDir.getAbsolutePath());
+    for (LifecycleListener listener : this.serverLifecycleListeners) {
+        tomcat.getServer().addLifecycleListener(listener);
+    }
+    // public static final String DEFAULT_PROTOCOL = "org.apache.coyote.http11.Http11NioProtocol";
+    // private String protocol = DEFAULT_PROTOCOL
+    // 这里的protocol就是org.apache.coyote.http11.Http11NioProtocol
+    // =================================设置Connector开始=============================================
+    Connector connector = new Connector(this.protocol);
+    connector.setThrowOnFailure(true);
+    tomcat.getService().addConnector(connector);
+    // 
+    customizeConnector(connector);
+    // =================================设置Connector结束=============================================
+    tomcat.setConnector(connector);
+    tomcat.getHost().setAutoDeploy(false);
+    configureEngine(tomcat.getEngine());
+    for (Connector additionalConnector : this.additionalTomcatConnectors) {
+        tomcat.getService().addConnector(additionalConnector);
+    }
+    // 准备tomcat的context，这里不细说了，后面再看
+    prepareContext(tomcat.getHost(), initializers);
+    // 这里面创建TomcatWebServer时，会启动tomcat
+    return getTomcatWebServer(tomcat);
+}
+
+protected TomcatWebServer getTomcatWebServer(Tomcat tomcat) {
+    return new TomcatWebServer(tomcat, getPort() >= 0, getShutdown());
+}
+
+public TomcatWebServer(Tomcat tomcat, boolean autoStart, Shutdown shutdown) {
+    Assert.notNull(tomcat, "Tomcat Server must not be null");
+    this.tomcat = tomcat;
+    this.autoStart = autoStart;
+    this.gracefulShutdown = (shutdown == Shutdown.GRACEFUL) ? new GracefulShutdown(tomcat) : null;
+    initialize();
+}
+
+private void initialize() throws WebServerException {
+    logger.info("Tomcat initialized with port(s): " + getPortsDescription(false));
+    synchronized (this.monitor) {
+        try {
+            addInstanceIdToEngineName();
+
+            Context context = findContext();
+            context.addLifecycleListener((event) -> {
+                if (context.equals(event.getSource()) && Lifecycle.START_EVENT.equals(event.getType())) {
+                    // Remove service connectors so that protocol binding doesn't
+                    // happen when the service is started.
+                    removeServiceConnectors();
+                }
+            });
+
+            // Start the server to trigger initialization listeners
+            // 启动tomcat
+            this.tomcat.start();
+
+            // We can re-throw failure exception directly in the main thread
+            rethrowDeferredStartupExceptions();
+
+            try {
+                ContextBindings.bindClassLoader(context, context.getNamingToken(), getClass().getClassLoader());
+            }
+            catch (NamingException ex) {
+                // Naming is not enabled. Continue
+            }
+
+            // Unlike Jetty, all Tomcat threads are daemon threads. We create a
+            // blocking non-daemon to stop immediate shutdown
+            startDaemonAwaitThread();
+        }
+        catch (Exception ex) {
+            stopSilently();
+            destroySilently();
+            throw new WebServerException("Unable to start embedded Tomcat", ex);
+        }
+    }
+}
+```
+# registerListeners()
+将会获取AbstractApplicationContext的applicationListeners和容器中的ApplicationListener进行注册，最后会尝试将earlyApplicationEvents广播出去。
+```java
+protected void registerListeners() {
+    // Register statically specified listeners first.
+    // 获取的是成员applicationListeners
+    // 这里getApplicationListeners()获取的applicationListeners是在refresh方法前的prepareContext方法中注册进来的
+    for (ApplicationListener<?> listener : getApplicationListeners()) {
+        // 获取SimpleApplicationEventMulticaster触发其方法
+        getApplicationEventMulticaster().addApplicationListener(listener);
+    }
+
+    // Do not initialize FactoryBeans here: We need to leave all regular beans
+    // uninitialized to let post-processors apply to them!
+    // // 从容器中获取ApplicationListener
+    String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
+    for (String listenerBeanName : listenerBeanNames) {
+        // 获取SimpleApplicationEventMulticaster触发其方法-这里放的是beanName
+        getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
+    }
+
+    // Publish early application events now that we finally have a multicaster...
+    // earlyApplicationEvents赋予earlyEventsToProcess 然后重新将置为null。如果earlyEventsToProcess不为空则进行遍历挨个进行事件广播。
+    Set<ApplicationEvent> earlyEventsToProcess = this.earlyApplicationEvents;
+    this.earlyApplicationEvents = null;
+    // 如果早期/渴望的事件存在，则将其广播出去
+    if (!CollectionUtils.isEmpty(earlyEventsToProcess)) {
+        for (ApplicationEvent earlyEvent : earlyEventsToProcess) {
+            getApplicationEventMulticaster().multicastEvent(earlyEvent);
+        }
+    }
+}
+```
+# finishBeanFactoryInitialization(beanFactory)
+
+# finishRefresh()
+
+# destroyBeans()
+
+# cancelRefresh()
+
+# resetCommonCaches()
