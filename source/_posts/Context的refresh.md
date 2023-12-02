@@ -596,6 +596,125 @@ public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
 6. 解析方法级别@Bean注解并将返回值注册成BeanDefinition
 7. 注册ImportAwareBeanPostProcessor到容器中,用于处理ImportAware
 
+## ConfigurationClassPostProcessor类是怎么来的
+在SpringBoot学习一文中提到创建ApplicationContext中，这里首先在BeanFactory中register了6个类类型，然后在prepareContext的load中添加应用类的类型共7个类型：
+- org.springframework.context.annotation.internalConfigurationAnnotationProcessor：ConfigurationClassPostProcessor
+- org.springframework.context.annotation.internalAutowiredAnnotationProcessor： AutowiredAnnotationBeanPostProcessor
+- org.springframework.context.annotation.internalCommonAnnotationProcessor： CommonAnnotationBeanPostProcessor
+- org.springframework.context.annotation.internalPersistenceAnnotationProcessor： PersistenceAnnotationBeanPostProcessor（一般不会添加这条记录）
+- org.springframework.context.event.internalEventListenerProcessor： EventListenerMethodProcessor
+- org.springframework.context.event.internalEventListenerFactory： DefaultEventListenerFactory
+- SpringBootDemo: SpringBootDemo(SpringBoot项目的入口类)
+
+```java
+// 创建的是AnnotationConfigServletWebServerApplicationContext
+private ConfigurableApplicationContext createContext() {
+    if (!AotDetector.useGeneratedArtifacts()) {
+        // 走的这个分支
+        return new AnnotationConfigServletWebServerApplicationContext();
+    }
+    return new ServletWebServerApplicationContext();
+}
+
+public AnnotationConfigServletWebServerApplicationContext() {
+    this.reader = new AnnotatedBeanDefinitionReader(this);
+    this.scanner = new ClassPathBeanDefinitionScanner(this);
+}
+
+public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry) {
+    this(registry, getOrCreateEnvironment(registry));
+}
+
+public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry, Environment environment) {
+    Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
+    Assert.notNull(environment, "Environment must not be null");
+    this.registry = registry;
+    this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+    AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
+}
+
+public static void registerAnnotationConfigProcessors(BeanDefinitionRegistry registry) {
+    registerAnnotationConfigProcessors(registry, null);
+}
+
+public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
+        BeanDefinitionRegistry registry, @Nullable Object source) {
+
+    DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);
+    if (beanFactory != null) {
+        if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
+            beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
+        }
+        if (!(beanFactory.getAutowireCandidateResolver() instanceof ContextAnnotationAutowireCandidateResolver)) {
+            beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
+        }
+    }
+
+    Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
+
+    // registerPostProcessor就是将后面的BEAN_NAME作为key，RootBeanDefinition作为value存入到BeanFactory的this.beanDefinitionMap中
+    if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+        RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
+        def.setSource(source);
+        // key: org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+        // value: ConfigurationClassPostProcessor
+        beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
+    }
+
+    if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+        RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
+        def.setSource(source);
+        // key: org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+        // value: AutowiredAnnotationBeanPostProcessor
+        beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
+    }
+
+    // Check for JSR-250 support, and if present add the CommonAnnotationBeanPostProcessor.
+    if (jsr250Present && !registry.containsBeanDefinition(COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+        RootBeanDefinition def = new RootBeanDefinition(CommonAnnotationBeanPostProcessor.class);
+        def.setSource(source);
+        // key: org.springframework.context.annotation.internalCommonAnnotationProcessor
+        // value: CommonAnnotationBeanPostProcessor
+        beanDefs.add(registerPostProcessor(registry, def, COMMON_ANNOTATION_PROCESSOR_BEAN_NAME));
+    }
+
+    // Check for JPA support, and if present add the PersistenceAnnotationBeanPostProcessor(一般走不到这里)
+    if (jpaPresent && !registry.containsBeanDefinition(PERSISTENCE_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+        RootBeanDefinition def = new RootBeanDefinition();
+        try {
+            def.setBeanClass(ClassUtils.forName(PERSISTENCE_ANNOTATION_PROCESSOR_CLASS_NAME,
+                    AnnotationConfigUtils.class.getClassLoader()));
+        }
+        catch (ClassNotFoundException ex) {
+            throw new IllegalStateException(
+                    "Cannot load optional framework class: " + PERSISTENCE_ANNOTATION_PROCESSOR_CLASS_NAME, ex);
+        }
+        def.setSource(source);
+        // key: org.springframework.context.annotation.internalPersistenceAnnotationProcessor
+        // value: org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor
+        beanDefs.add(registerPostProcessor(registry, def, PERSISTENCE_ANNOTATION_PROCESSOR_BEAN_NAME));
+    }
+
+    if (!registry.containsBeanDefinition(EVENT_LISTENER_PROCESSOR_BEAN_NAME)) {
+        RootBeanDefinition def = new RootBeanDefinition(EventListenerMethodProcessor.class);
+        def.setSource(source);
+        // key: org.springframework.context.event.internalEventListenerProcessor
+        // value: EventListenerMethodProcessor
+        beanDefs.add(registerPostProcessor(registry, def, EVENT_LISTENER_PROCESSOR_BEAN_NAME));
+    }
+
+    if (!registry.containsBeanDefinition(EVENT_LISTENER_FACTORY_BEAN_NAME)) {
+        RootBeanDefinition def = new RootBeanDefinition(DefaultEventListenerFactory.class);
+        def.setSource(source);
+        // key: org.springframework.context.event.internalEventListenerFactory
+        // value: DefaultEventListenerFactory
+        beanDefs.add(registerPostProcessor(registry, def, EVENT_LISTENER_FACTORY_BEAN_NAME));
+    }
+
+    return beanDefs;
+}
+```
+
 总结一点就是，经过ConfigurationClassPostProcessor和MapperScannerConfigurer的处理，我们的DefaultListableBeanFactory的beanDefinitionMap中已经拥有了应用程序中的静态BeanDefinition(可能不是全部，比如程序动态添加)。
 >https://blog.csdn.net/J080624/article/details/54345467
 
