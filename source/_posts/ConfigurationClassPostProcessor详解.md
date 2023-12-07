@@ -4,7 +4,7 @@ date: 2023-12-06 15:30:39
 tags: SpringBoot启动流程
 categories: SpringBoot
 ---
-关于ConfigurationClassPostProcessor本文我们这里不做进一步分析，简单梳理其作用如下：
+关于ConfigurationClassPostProcessor梳理其作用如下：
 1. 对于候选配置类使用CGLIB Enhancer增强
 2. 解析处理@PropertySource 注解
 3. 解析@ComponentScan注解,扫描@Configuration、@Service、@Controller、@Repository和@Component注解并注册BeanDefinition
