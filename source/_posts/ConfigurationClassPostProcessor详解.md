@@ -752,3 +752,177 @@ DeferredImportSelector接口是ImportSelector接口的一个扩展；
 - ImportSelector实例的selectImports方法的执行时机，是在@Configguration注解中的其他逻辑被处理之前，所谓的其他逻辑，包括对@ImportResource、@Bean这些注解的处理（注意，这里只是对@Bean修饰的方法的处理，并不是立即调用@Bean修饰的方法，这个区别很重要！）；
 - DeferredImportSelector实例的selectImports方法的执行时机，是在@Configguration注解中的其他逻辑被处理完毕之后，所谓的其他逻辑，包括对@ImportResource、@Bean这些注解的处理；
 - DeferredImportSelector的实现类可以用Order注解，或者实现Ordered接口来对selectImports的执行顺序排序
+
+# postProcessBeanFactory
+```java
+public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    int factoryId = System.identityHashCode(beanFactory);
+    if (this.factoriesPostProcessed.contains(factoryId)) {
+        throw new IllegalStateException(
+                "postProcessBeanFactory already called on this post-processor against " + beanFactory);
+    }
+    this.factoriesPostProcessed.add(factoryId);
+    if (!this.registriesPostProcessed.contains(factoryId)) {
+        // BeanDefinitionRegistryPostProcessor hook apparently not supported...
+        // Simply call processConfigurationClasses lazily at this point then.
+        processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
+    }
+
+    enhanceConfigurationClasses(beanFactory);
+    // 添加BeanPostProcessor
+    beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
+}
+
+public void enhanceConfigurationClasses(ConfigurableListableBeanFactory beanFactory) {
+    StartupStep enhanceConfigClasses = this.applicationStartup.start("spring.context.config-classes.enhance");
+    Map<String, AbstractBeanDefinition> configBeanDefs = new LinkedHashMap<>();
+    for (String beanName : beanFactory.getBeanDefinitionNames()) {
+        BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
+        Object configClassAttr = beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE);
+        AnnotationMetadata annotationMetadata = null;
+        MethodMetadata methodMetadata = null;
+        if (beanDef instanceof AnnotatedBeanDefinition) {
+            AnnotatedBeanDefinition annotatedBeanDefinition = (AnnotatedBeanDefinition) beanDef;
+            annotationMetadata = annotatedBeanDefinition.getMetadata();
+            methodMetadata = annotatedBeanDefinition.getFactoryMethodMetadata();
+        }
+        if ((configClassAttr != null || methodMetadata != null) && beanDef instanceof AbstractBeanDefinition) {
+            // Configuration class (full or lite) or a configuration-derived @Bean method
+            // -> eagerly resolve bean class at this point, unless it's a 'lite' configuration
+            // or component class without @Bean methods.
+            AbstractBeanDefinition abd = (AbstractBeanDefinition) beanDef;
+            if (!abd.hasBeanClass()) {
+                boolean liteConfigurationCandidateWithoutBeanMethods =
+                        (ConfigurationClassUtils.CONFIGURATION_CLASS_LITE.equals(configClassAttr) &&
+                            annotationMetadata != null && !ConfigurationClassUtils.hasBeanMethods(annotationMetadata));
+                if (!liteConfigurationCandidateWithoutBeanMethods) {
+                    try {
+                        abd.resolveBeanClass(this.beanClassLoader);
+                    }
+                    catch (Throwable ex) {
+                        throw new IllegalStateException(
+                                "Cannot load configuration class: " + beanDef.getBeanClassName(), ex);
+                    }
+                }
+            }
+        }
+        if (ConfigurationClassUtils.CONFIGURATION_CLASS_FULL.equals(configClassAttr)) {
+            if (!(beanDef instanceof AbstractBeanDefinition)) {
+                throw new BeanDefinitionStoreException("Cannot enhance @Configuration bean definition '" +
+                        beanName + "' since it is not stored in an AbstractBeanDefinition subclass");
+            }
+            else if (logger.isInfoEnabled() && beanFactory.containsSingleton(beanName)) {
+                logger.info("Cannot enhance @Configuration bean definition '" + beanName +
+                        "' since its singleton instance has been created too early. The typical cause " +
+                        "is a non-static @Bean method with a BeanDefinitionRegistryPostProcessor " +
+                        "return type: Consider declaring such methods as 'static'.");
+            }
+            configBeanDefs.put(beanName, (AbstractBeanDefinition) beanDef);
+        }
+    }
+    if (configBeanDefs.isEmpty() || NativeDetector.inNativeImage()) {
+        // nothing to enhance -> return immediately
+        enhanceConfigClasses.end();
+        return;
+    }
+
+    ConfigurationClassEnhancer enhancer = new ConfigurationClassEnhancer();
+    for (Map.Entry<String, AbstractBeanDefinition> entry : configBeanDefs.entrySet()) {
+        AbstractBeanDefinition beanDef = entry.getValue();
+        // If a @Configuration class gets proxied, always proxy the target class
+        beanDef.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
+        // Set enhanced subclass of the user-specified bean class
+        Class<?> configClass = beanDef.getBeanClass();
+        // 对于候选配置类使用CGLIB Enhancer增强
+        Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
+        if (configClass != enhancedClass) {
+            if (logger.isTraceEnabled()) {
+                logger.trace(String.format("Replacing bean definition '%s' existing class '%s' with " +
+                        "enhanced class '%s'", entry.getKey(), configClass.getName(), enhancedClass.getName()));
+            }
+            // 将增强的class设置到BeanDefinition中
+            beanDef.setBeanClass(enhancedClass);
+        }
+    }
+    enhanceConfigClasses.tag("classCount", () -> String.valueOf(configBeanDefs.keySet().size())).end();
+}
+
+public Class<?> enhance(Class<?> configClass, @Nullable ClassLoader classLoader) {
+    if (EnhancedConfiguration.class.isAssignableFrom(configClass)) {
+        if (logger.isDebugEnabled()) {
+            logger.debug(String.format("Ignoring request to enhance %s as it has " +
+                    "already been enhanced. This usually indicates that more than one " +
+                    "ConfigurationClassPostProcessor has been registered (e.g. via " +
+                    "<context:annotation-config>). This is harmless, but you may " +
+                    "want check your configuration and remove one CCPP if possible",
+                    configClass.getName()));
+        }
+        return configClass;
+    }
+    Class<?> enhancedClass = createClass(newEnhancer(configClass, classLoader));
+    if (logger.isTraceEnabled()) {
+        logger.trace(String.format("Successfully enhanced %s; enhanced class name is: %s",
+                configClass.getName(), enhancedClass.getName()));
+    }
+    return enhancedClass;
+}
+
+private Class<?> createClass(Enhancer enhancer) {
+    Class<?> subclass = enhancer.createClass();
+    // Registering callbacks statically (as opposed to thread-local)
+    // is critical for usage in an OSGi environment (SPR-5932)...
+    Enhancer.registerStaticCallbacks(subclass, CALLBACKS);
+    return subclass;
+}
+
+public Class createClass() {
+    classOnly = true;
+    return (Class) createHelper();
+}
+
+private Object createHelper() {
+    preValidate();
+    Object key = KEY_FACTORY.newInstance((superclass != null) ? superclass.getName() : null,
+            ReflectUtils.getNames(interfaces),
+            filter == ALL_ZERO ? null : new WeakCacheKey<CallbackFilter>(filter),
+            callbackTypes,
+            useFactory,
+            interceptDuringConstruction,
+            serialVersionUID);
+    this.currentKey = key;
+    Object result = super.create(key);
+    return result;
+}
+
+protected Object create(Object key) {
+    try {
+        ClassLoader loader = getClassLoader();
+        Map<ClassLoader, ClassLoaderData> cache = CACHE;
+        ClassLoaderData data = cache.get(loader);
+        if (data == null) {
+            synchronized (AbstractClassGenerator.class) {
+                cache = CACHE;
+                data = cache.get(loader);
+                if (data == null) {
+                    Map<ClassLoader, ClassLoaderData> newCache = new WeakHashMap<ClassLoader, ClassLoaderData>(cache);
+                    data = new ClassLoaderData(loader);
+                    newCache.put(loader, data);
+                    CACHE = newCache;
+                }
+            }
+        }
+        this.key = key;
+        Object obj = data.get(this, getUseCache());
+        if (obj instanceof Class) {
+            return firstInstance((Class) obj);
+        }
+        return nextInstance(obj);
+    }
+    catch (RuntimeException | Error ex) {
+        throw ex;
+    }
+    catch (Exception ex) {
+        throw new CodeGenerationException(ex);
+    }
+}
+```
