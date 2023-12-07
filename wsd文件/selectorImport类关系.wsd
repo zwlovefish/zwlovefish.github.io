@@ -1,0 +1,5 @@
+@startuml selectorimport类关系
+interface ImportSelector
+interface DeferredImportSelector extends ImportSelector
+class AutoConfigurationImportSelector implements DeferredImportSelector
+@enduml
