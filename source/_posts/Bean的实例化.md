@@ -657,7 +657,7 @@ protected void invokeInitMethods(String beanName, Object bean, @Nullable RootBea
 ```
 
 # 解决循环依赖
-先判断是否打开了循环依赖，然后将bean的ObjecFactory加到入三级缓存，将其从二级缓存中移除，并将bean加入到registeredSingletons中，在填充属性的时候解决循环依赖，这里看一下具体的流程
+假设使用的是字段注入。先判断是否打开了循环依赖，然后将bean的ObjecFactory加到入三级缓存，将其从二级缓存中移除，并将bean加入到registeredSingletons中，在填充属性的时候解决循环依赖，这里看一下具体的流程：
 ```java
 protected void populateBean(String beanName, RootBeanDefinition mbd, @Nullable BeanWrapper bw) {
     if (bw == null) {
