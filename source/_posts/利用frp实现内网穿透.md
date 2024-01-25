@@ -29,6 +29,24 @@ log_level = info #日志级别，建议info
 log_max_days = 3 #保存日志最大天数，建议3天或者7天
 ```
 其中，bind_port和token用于和openwrt路由器上安装的frpc保持一致，有dashboard_port、dashboard_user以及dashboard_pwd用于在这台ecs上查看frps的状态
+## 开机启动
+在/usr/lib/systemd/system下创建frps.service，内容如下：
+```shell
+[Unit]
+Description=Frp Server Service
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Restart=on-failure
+RestartSec=5s
+ExecStart=/usr/local/frps/frps -c /usr/local/frps/frps.ini
+
+[Install]
+WantedBy=multi-user.target
+```
+然后执行systemctl start frps.service和systemctl enable frps.service
 
 # openwrt设置
 ## fprc设置
