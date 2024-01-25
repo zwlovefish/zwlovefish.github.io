@@ -27,8 +27,10 @@
 <meta property="og:description" content="准备工作 frpc 拥有公网ip地址的ECS 一台安装有openwrt的路由器 内网主机">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="http://example.com/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/openwrt%E9%85%8D%E7%BD%AE.png">
+<meta property="og:image" content="http://example.com/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/wol.png">
+<meta property="og:image" content="http://example.com/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/rdp.png">
 <meta property="article:published_time" content="2024-01-25T06:38:18.000Z">
-<meta property="article:modified_time" content="2024-01-25T06:52:04.864Z">
+<meta property="article:modified_time" content="2024-01-25T07:42:04.739Z">
 <meta property="article:author" content="zhou jianwei">
 <meta property="article:tag" content="frp 内网穿透">
 <meta name="twitter:card" content="summary">
@@ -115,7 +117,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.</span> <span class="nav-text">准备工作</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%AC%E7%BD%91%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">公网设置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#openwrt%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.</span> <span class="nav-text">openwrt设置</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.</span> <span class="nav-text">准备工作</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%AC%E7%BD%91%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">公网设置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8"><span class="nav-number">2.1.</span> <span class="nav-text">开机启动</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#openwrt%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.</span> <span class="nav-text">openwrt设置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#fprc%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.1.</span> <span class="nav-text">fprc设置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9C%E7%A8%8B%E5%BC%80%E6%9C%BA%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.2.</span> <span class="nav-text">远程开机设置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2%E6%98%A0%E5%B0%84%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.3.</span> <span class="nav-text">远程桌面映射设置</span></a></li></ol></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -196,7 +198,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2024-01-25 14:38:18 / 修改时间：14:52:04" itemprop="dateCreated datePublished" datetime="2024-01-25T14:38:18+08:00">2024-01-25</time>
+      <time title="创建时间：2024-01-25 14:38:18 / 修改时间：15:42:04" itemprop="dateCreated datePublished" datetime="2024-01-25T14:38:18+08:00">2024-01-25</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -229,7 +231,12 @@
 <h1 id="公网设置"><a href="#公网设置" class="headerlink" title="公网设置"></a>公网设置</h1><p>下载frps到公网ecs，在frps所在目录下创建一个frps.ini用于配置frps。<br>其中frps.ini的内容为：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[common]</span><br><span class="line">bind_port = #和客户端通信的端口</span><br><span class="line">token = #用户端连接的密码</span><br><span class="line">dashboard_port = #监控面板的端口</span><br><span class="line">dashboard_user = #监控面板的用户名</span><br><span class="line">dashboard_pwd = #监控面板的密码</span><br><span class="line">enable_prometheus = true # 建议默认为true</span><br><span class="line">log_file = /var/log/frps.log #日志</span><br><span class="line">log_level = info #日志级别，建议info</span><br><span class="line">log_max_days = 3 #保存日志最大天数，建议3天或者7天</span><br></pre></td></tr></table></figure>
 <p>其中，bind_port和token用于和openwrt路由器上安装的frpc保持一致，有dashboard_port、dashboard_user以及dashboard_pwd用于在这台ecs上查看frps的状态</p>
-<h1 id="openwrt设置"><a href="#openwrt设置" class="headerlink" title="openwrt设置"></a>openwrt设置</h1><p><img src="/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/openwrt%E9%85%8D%E7%BD%AE.png" alt="openwrt配置"></p>
+<h2 id="开机启动"><a href="#开机启动" class="headerlink" title="开机启动"></a>开机启动</h2><p>在&#x2F;usr&#x2F;lib&#x2F;systemd&#x2F;system下创建frps.service，内容如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[Unit]</span><br><span class="line">Description=Frp Server Service</span><br><span class="line">After=network.target</span><br><span class="line"></span><br><span class="line">[Service]</span><br><span class="line">Type=simple</span><br><span class="line">User=nobody</span><br><span class="line">Restart=on-failure</span><br><span class="line">RestartSec=5s</span><br><span class="line">ExecStart=/usr/local/frps/frps -c /usr/local/frps/frps.ini</span><br><span class="line"></span><br><span class="line">[Install]</span><br><span class="line">WantedBy=multi-user.target</span><br></pre></td></tr></table></figure>
+
+<h1 id="openwrt设置"><a href="#openwrt设置" class="headerlink" title="openwrt设置"></a>openwrt设置</h1><h2 id="fprc设置"><a href="#fprc设置" class="headerlink" title="fprc设置"></a>fprc设置</h2><p><img src="/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/openwrt%E9%85%8D%E7%BD%AE.png" alt="openwrt配置"></p>
+<h2 id="远程开机设置"><a href="#远程开机设置" class="headerlink" title="远程开机设置"></a>远程开机设置</h2><p>windows远程开机的话，百度一下就可以了。<br>流程就是，在手机上下载一个wake on lan，通过这个app的远程开机端口连接到公网ecs的远程开机端口，然后公网ecs的这个远程开机端口连接到openwrt的frpc的远程开机端口，通过广播唤醒windows主机<br><img src="/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/wol.png" alt="wol"></p>
+<h2 id="远程桌面映射设置"><a href="#远程桌面映射设置" class="headerlink" title="远程桌面映射设置"></a>远程桌面映射设置</h2><p><img src="/2024/01/25/%E5%88%A9%E7%94%A8frp%E5%AE%9E%E7%8E%B0%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F/rdp.png" alt="rdp"><br>注意的是这里要在公网ecs上放开bind_port，dashboard_port, 远程开机以及远程桌面的端口。<br>本地windows主机需要放开3389的端口，建立入站规则</p>
 
     </div>
 
