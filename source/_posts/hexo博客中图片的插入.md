@@ -6,7 +6,7 @@ categories: 随笔
 ---
 此文总接一下在 Hexo 搭建的博客中，插入图片的常用方式
 <!--more-->
-#第一种
+# 第一种
 利用src链接的方式
 ```markdown
 ![image.name](https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png)
