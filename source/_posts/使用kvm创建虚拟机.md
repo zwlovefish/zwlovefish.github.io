@@ -102,15 +102,20 @@ ip addr show br0
 - **Windows 11 安装镜像**（如 `Win11_25H2_Chinese_Simplified_x64_v2.iso`）
 - **virtio-win 驱动镜像**（[下载地址](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/)）：Windows 默认不认 virtio 磁盘/网卡，必须借助它加载驱动，性能才能拉满
 
-## 2. 安装 TPM 模拟器（Win11 必需）
+## 2. 安装前置依赖：OVMF 与 swtpm（Win11 必需）
 
-Win11 强制要求 TPM 2.0，物理机没有 TPM 芯片也没关系，KVM 可以用软件模拟。安装 swtpm：
+Win11 强制要求 **UEFI 启动 + TPM 2.0**，需要提前装好这两样：
 
 ```bash
+# OVMF：UEFI 固件，对应 virt-install 里的 --boot uefi
+sudo apt install -y ovmf
+
+# swtpm：TPM 2.0 软件模拟，物理机没有 TPM 芯片也没关系
+# 对应 virt-install 里的 --tpm backend.type=emulator...
 sudo apt install -y swtpm swtpm-tools
 ```
 
-后面 virt-install 命令里的 `--tpm backend.type=emulator...` 参数就依赖它，不装的话创建 Win11 虚拟机会报错。
+这两项对应后面 virt-install 命令中的 `--boot uefi` 和 `--tpm` 参数，缺任何一个，创建 Win11 虚拟机都会失败或无法通过安装检查。
 
 ## 3. 创建磁盘镜像
 
