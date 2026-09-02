@@ -32,8 +32,10 @@ egrep -c '(vmx|svm)' /proc/cpuinfo
 
 ```bash
 sudo apt update
-sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients virt-manager -y
+sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients virtinst -y
 ```
+
+> 我用的是 **Ubuntu Server**（无图形化桌面），所以不装 virt-manager 图形界面，改装 `virtinst` 提供 `virt-install` 命令行工具，后面创建虚拟机全靠它。如果是桌面版，把 `virtinst` 换成 `virt-manager` 即可。
 
 ## 3. 添加用户权限
 
@@ -141,11 +143,11 @@ sudo virt-install \
 | 第二个 `--disk ...device=cdrom` | 把 virtio-win 驱动盘挂成光驱，装系统时加载驱动用 |
 | `--network bridge=br0` | 接入桥接网络，虚拟机获得独立 IP |
 
-> 💡 新手也可以直接 `virt-manager` 打开图形界面创建：选择 ISO → 分配 CPU/内存 → 创建磁盘（建议 50GB+）→ 完成。但命令行一次把 UEFI/TPM/virtio 都配好，反而省心。
+> 💡 桌面版用户也可以用 `virt-manager` 图形界面创建：选择 ISO → 分配 CPU/内存 → 创建磁盘（建议 50GB+）→ 完成。但 Server 环境下命令行是唯一选择，而且一次把 UEFI/TPM/virtio 都配好，反而省心。
 
 ## 4. 连接控制台安装系统
 
-用 VNC 客户端连宿主机的 5900 端口（或直接在宿主机上打开 virt-manager）。
+用 VNC 客户端连宿主机的 5900 端口（没有图形界面的 Server 上，在局域网内任意一台电脑装个 VNC 客户端连过来即可）。
 
 ### 安装过程中加载 virtio 驱动
 
@@ -265,4 +267,4 @@ KVM 相比 VirtualBox 的优势：
 
 装 Win11 的几个坑再总结一遍：**UEFI 启动、TPM 2.0、virtio 驱动加载、OOBE 联网绕过**，把这四点提前处理好，整个安装过程和装普通系统没什么区别。适合场景：开发环境、服务器虚拟化、云平台、容器运行时。
 
-> 提示：首次使用建议通过 virt-manager 图形界面操作，熟悉后再使用命令行。
+> 提示：Server 环境全程命令行（virt-install + virsh + VNC）就够用；桌面版用户首次可通过 virt-manager 图形界面熟悉操作，再过渡到命令行。
