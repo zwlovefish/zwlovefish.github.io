@@ -1,0 +1,14 @@
+@startuml WebServerFactory
+interface ServletWebServerFactory extends WebServerFactory {
+	WebServer getWebServer(ServletContextInitializer... initializers);
+}
+interface ConfigurableWebServerFactory extends WebServerFactory
+
+interface ConfigurableServletWebServerFactory extends ConfigurableWebServerFactory, ServletWebServerFactory
+
+abstract class AbstractServletWebServerFactory implements ConfigurableServletWebServerFactory
+
+class TomcatServletWebServerFactory extends AbstractServletWebServerFactory
+class JettyServletWebServerFactory extends AbstractServletWebServerFactory
+class UndertowServletWebServerFactory extends AbstractServletWebServerFactory
+@enduml

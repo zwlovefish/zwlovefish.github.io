@@ -1,0 +1,35 @@
+@startuml RetreentLock
+start
+if (RetreentLock(true or false)) then (默认为true)
+    :公平锁;
+    :lock;
+else (false)
+    :非公平锁;
+    :lock;
+    note left: 非公平锁执行lock时，非公平锁直接设置state为1\n设置成功的话，再设置当前线程为锁持有的线程\n设置失败的话，在执行acquire(1)
+    if (compareAndSetState(0, 1)) then (true)
+        :setExclusiveOwnerThread(Thread.currentThread());
+        stop;
+    else (false)
+    endif
+endif
+:acquire(1);
+if (tryAcquire(1)) then(公平锁)
+    :tryAcquire(1);
+else (非公平锁)
+    :tryAcquire(1);
+    note right: 非公平锁中tryAcquire中执行的是nonfairTryAcquire
+    :nonfairTryAcquire(1);
+endif
+if (tryAcquire获取锁成功) then(true)
+    stop;
+else (false)
+    :addWaiter(Node.EXCLUSIVE);
+    note right: 将节点node入队列
+    if (acquireQueued(node, 1)) then(true)
+        :selfInterrupt();
+    else (false)
+        stop;
+endif
+end
+@enduml
