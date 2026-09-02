@@ -32,7 +32,7 @@ egrep -c '(vmx|svm)' /proc/cpuinfo
 
 ```bash
 sudo apt update
-sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager -y
+sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients virt-manager -y
 ```
 
 ## 3. 添加用户权限
@@ -73,19 +73,36 @@ sudo virsh pool-start default
 
 **NAT 网络**（默认已配置）：虚拟机通过宿主机上网，无需额外配置。
 
-**桥接网络**：让虚拟机获取独立 IP，宿主机和虚拟机在局域网内平起平坐。我装 Win11 就是为了让局域网其他设备能直接访问它，所以配置了桥接：
+**桥接网络**：让虚拟机获取独立 IP，宿主机和虚拟机在局域网内平起平坐。我装 Win11 就是为了让局域网其他设备能直接访问它，所以配置了桥接。
 
-```bash
-# 安装桥接工具
-sudo apt install bridge-utils -y
+Ubuntu 24.04 用 **netplan** 配置最直接。编辑 `/etc/netplan/50-cloud-init.yaml`（文件名可能不同，看 `/etc/netplan/` 下实际情况），把物理网卡挂到桥 `br0` 下面：
 
-# 创建桥接配置（根据实际网卡名调整，我的网卡是 enp0s3）
-sudo nmcli connection add type bridge ifname br0
-sudo nmcli connection add type ethernet slave-type bridge con-name bridge-br0 ifname enp0s3 master br0
-sudo nmcli connection up br0
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp2s0:
+      dhcp4: false
+  bridges:
+    br0:
+      interfaces: [enp2s0]
+      dhcp4: true
 ```
 
-> ⚠️ 如果是 SSH 远程操作，执行前请确认桥接后的网络仍然连通，否则可能把自己锁在门外。
+要点说明：
+
+- `enp2s0` 是我的物理网卡名，按实际情况改（`ip addr` 查看）
+- 物理网卡本身 `dhcp4: false` 不再直接要 IP，IP 由桥 `br0` 通过 DHCP 获取（想固定 IP 就给 `br0` 配 `addresses`/`routes`/`nameservers`）
+- 修改后应用配置：
+
+```bash
+sudo netplan apply
+
+# 验证：br0 应该拿到局域网 IP，enp2s0 不再有独立 IP
+ip addr show br0
+```
+
+> ⚠️ 如果是 SSH 远程操作，`netplan apply` 执行后网络会短暂中断，配置有误可能直接失联。建议先 `sudo netplan try`（自动回滚模式），确认无误再 `apply`。
 
 # 五、创建虚拟机：以安装 Windows 11 为例
 
