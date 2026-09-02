@@ -56,20 +56,7 @@ lsmod | grep kvm
 # 应显示 kvm_intel 或 kvm_amd
 ```
 
-# 三、配置存储
-
-```bash
-# 创建虚拟机存储目录并设置权限
-sudo mkdir -p /var/lib/libvirt/images
-sudo chown libvirt-qemu:libvirt-qemu /var/lib/libvirt/images
-
-# 添加 KVM 存储池
-sudo virsh pool-define-as default --type dir --target /var/lib/libvirt/images
-sudo virsh pool-autostart default
-sudo virsh pool-start default
-```
-
-# 四、网络配置（可选）
+# 三、网络配置（可选）
 
 **NAT 网络**（默认已配置）：虚拟机通过宿主机上网，无需额外配置。
 
@@ -104,7 +91,7 @@ ip addr show br0
 
 > ⚠️ 如果是 SSH 远程操作，`netplan apply` 执行后网络会短暂中断，配置有误可能直接失联。建议先 `sudo netplan try`（自动回滚模式），确认无误再 `apply`。
 
-# 五、创建虚拟机：以安装 Windows 11 为例
+# 四、创建虚拟机：以安装 Windows 11 为例
 
 ## 1. 准备镜像
 
@@ -179,7 +166,7 @@ oobe\BypassNRO
 
 虚拟机自动重启后，就会出现"我没有 Internet 连接"选项，可以以本地账户继续安装。
 
-# 六、安装后的收尾
+# 五、安装后的收尾
 
 ## 弹出已挂载的 ISO
 
@@ -207,7 +194,7 @@ sudo virsh detach-disk win11 sdb --config
 sudo virsh domblklist win11
 ```
 
-# 七、常用管理命令
+# 六、常用管理命令
 
 ```bash
 # 查看所有虚拟机
@@ -232,7 +219,7 @@ sudo virsh pool-list --all
 sudo virsh vol-list default
 ```
 
-# 八、性能优化与常见问题
+# 七、性能优化与常见问题
 
 ## 性能优化
 
@@ -266,7 +253,7 @@ sudo journalctl -u libvirtd -f
 sudo rm /var/lib/libvirt/images/虚拟机名.qcow2
 ```
 
-# 九、总结
+# 八、总结
 
 KVM 相比 VirtualBox 的优势：
 
