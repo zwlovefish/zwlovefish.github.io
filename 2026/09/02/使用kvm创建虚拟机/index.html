@@ -27,7 +27,7 @@
 <meta property="og:description" content="之前一直用 VirtualBox，最近在 Ubuntu 24.04 上换成了 KVM，性能确实好很多，接近物理机。这篇文章记录一下 KVM 的完整安装配置流程，并以安装 Windows 11 为例演示如何创建虚拟机（Win11 的坑不少：UEFI、TPM、virtio 驱动、强制联网检查，一个都不能少）。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-09-02T14:57:00.000Z">
-<meta property="article:modified_time" content="2026-09-02T15:03:53.751Z">
+<meta property="article:modified_time" content="2026-09-02T15:32:10.454Z">
 <meta property="article:author" content="zhou jianwei">
 <meta property="article:tag" content="KVM">
 <meta property="article:tag" content="Linux">
@@ -197,7 +197,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2026-09-02 22:57:00 / 修改时间：23:03:53" itemprop="dateCreated datePublished" datetime="2026-09-02T22:57:00+08:00">2026-09-02</time>
+      <time title="创建时间：2026-09-02 22:57:00 / 修改时间：23:32:10" itemprop="dateCreated datePublished" datetime="2026-09-02T22:57:00+08:00">2026-09-02</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -229,7 +229,7 @@
 </ul>
 <h1 id="二、安装-KVM"><a href="#二、安装-KVM" class="headerlink" title="二、安装 KVM"></a>二、安装 KVM</h1><h2 id="1-检查-CPU-支持"><a href="#1-检查-CPU-支持" class="headerlink" title="1. 检查 CPU 支持"></a>1. 检查 CPU 支持</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">egrep -c <span class="string">&#x27;(vmx|svm)&#x27;</span> /proc/cpuinfo</span><br><span class="line"><span class="comment"># 输出大于 0 表示支持</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="2-安装-KVM-及管理工具"><a href="#2-安装-KVM-及管理工具" class="headerlink" title="2. 安装 KVM 及管理工具"></a>2. 安装 KVM 及管理工具</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo apt update</span><br><span class="line">sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager -y</span><br></pre></td></tr></table></figure>
+<h2 id="2-安装-KVM-及管理工具"><a href="#2-安装-KVM-及管理工具" class="headerlink" title="2. 安装 KVM 及管理工具"></a>2. 安装 KVM 及管理工具</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo apt update</span><br><span class="line">sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients virt-manager -y</span><br></pre></td></tr></table></figure>
 
 <h2 id="3-添加用户权限"><a href="#3-添加用户权限" class="headerlink" title="3. 添加用户权限"></a>3. 添加用户权限</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo usermod -aG libvirt <span class="variable">$USER</span></span><br><span class="line">sudo usermod -aG kvm <span class="variable">$USER</span></span><br><span class="line"><span class="comment"># 注销重新登录生效</span></span><br></pre></td></tr></table></figure>
 
@@ -240,11 +240,20 @@
 <h1 id="三、配置存储"><a href="#三、配置存储" class="headerlink" title="三、配置存储"></a>三、配置存储</h1><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建虚拟机存储目录并设置权限</span></span><br><span class="line">sudo <span class="built_in">mkdir</span> -p /var/lib/libvirt/images</span><br><span class="line">sudo <span class="built_in">chown</span> libvirt-qemu:libvirt-qemu /var/lib/libvirt/images</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加 KVM 存储池</span></span><br><span class="line">sudo virsh pool-define-as default --<span class="built_in">type</span> <span class="built_in">dir</span> --target /var/lib/libvirt/images</span><br><span class="line">sudo virsh pool-autostart default</span><br><span class="line">sudo virsh pool-start default</span><br></pre></td></tr></table></figure>
 
 <h1 id="四、网络配置（可选）"><a href="#四、网络配置（可选）" class="headerlink" title="四、网络配置（可选）"></a>四、网络配置（可选）</h1><p><strong>NAT 网络</strong>（默认已配置）：虚拟机通过宿主机上网，无需额外配置。</p>
-<p><strong>桥接网络</strong>：让虚拟机获取独立 IP，宿主机和虚拟机在局域网内平起平坐。我装 Win11 就是为了让局域网其他设备能直接访问它，所以配置了桥接：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装桥接工具</span></span><br><span class="line">sudo apt install bridge-utils -y</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建桥接配置（根据实际网卡名调整，我的网卡是 enp0s3）</span></span><br><span class="line">sudo nmcli connection add <span class="built_in">type</span> bridge ifname br0</span><br><span class="line">sudo nmcli connection add <span class="built_in">type</span> ethernet slave-type bridge con-name bridge-br0 ifname enp0s3 master br0</span><br><span class="line">sudo nmcli connection up br0</span><br></pre></td></tr></table></figure>
+<p><strong>桥接网络</strong>：让虚拟机获取独立 IP，宿主机和虚拟机在局域网内平起平坐。我装 Win11 就是为了让局域网其他设备能直接访问它，所以配置了桥接。</p>
+<p>Ubuntu 24.04 用 <strong>netplan</strong> 配置最直接。编辑 <code>/etc/netplan/50-cloud-init.yaml</code>（文件名可能不同，看 <code>/etc/netplan/</code> 下实际情况），把物理网卡挂到桥 <code>br0</code> 下面：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">network:</span></span><br><span class="line">  <span class="attr">version:</span> <span class="number">2</span></span><br><span class="line">  <span class="attr">ethernets:</span></span><br><span class="line">    <span class="attr">enp2s0:</span></span><br><span class="line">      <span class="attr">dhcp4:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">bridges:</span></span><br><span class="line">    <span class="attr">br0:</span></span><br><span class="line">      <span class="attr">interfaces:</span> [<span class="string">enp2s0</span>]</span><br><span class="line">      <span class="attr">dhcp4:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>要点说明：</p>
+<ul>
+<li><code>enp2s0</code> 是我的物理网卡名，按实际情况改（<code>ip addr</code> 查看）</li>
+<li>物理网卡本身 <code>dhcp4: false</code> 不再直接要 IP，IP 由桥 <code>br0</code> 通过 DHCP 获取（想固定 IP 就给 <code>br0</code> 配 <code>addresses</code>&#x2F;<code>routes</code>&#x2F;<code>nameservers</code>）</li>
+<li>修改后应用配置：</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo netplan apply</span><br><span class="line"></span><br><span class="line"><span class="comment"># 验证：br0 应该拿到局域网 IP，enp2s0 不再有独立 IP</span></span><br><span class="line">ip addr show br0</span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>⚠️ 如果是 SSH 远程操作，执行前请确认桥接后的网络仍然连通，否则可能把自己锁在门外。</p>
+<p>⚠️ 如果是 SSH 远程操作，<code>netplan apply</code> 执行后网络会短暂中断，配置有误可能直接失联。建议先 <code>sudo netplan try</code>（自动回滚模式），确认无误再 <code>apply</code>。</p>
 </blockquote>
 <h1 id="五、创建虚拟机：以安装-Windows-11-为例"><a href="#五、创建虚拟机：以安装-Windows-11-为例" class="headerlink" title="五、创建虚拟机：以安装 Windows 11 为例"></a>五、创建虚拟机：以安装 Windows 11 为例</h1><h2 id="1-准备镜像"><a href="#1-准备镜像" class="headerlink" title="1. 准备镜像"></a>1. 准备镜像</h2><p>需要两个 ISO：</p>
 <ul>
