@@ -102,7 +102,17 @@ ip addr show br0
 - **Windows 11 安装镜像**（如 `Win11_25H2_Chinese_Simplified_x64_v2.iso`）
 - **virtio-win 驱动镜像**（[下载地址](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/)）：Windows 默认不认 virtio 磁盘/网卡，必须借助它加载驱动，性能才能拉满
 
-## 2. 创建磁盘镜像
+## 2. 安装 TPM 模拟器（Win11 必需）
+
+Win11 强制要求 TPM 2.0，物理机没有 TPM 芯片也没关系，KVM 可以用软件模拟。安装 swtpm：
+
+```bash
+sudo apt install -y swtpm swtpm-tools
+```
+
+后面 virt-install 命令里的 `--tpm backend.type=emulator...` 参数就依赖它，不装的话创建 Win11 虚拟机会报错。
+
+## 3. 创建磁盘镜像
 
 ```bash
 # Win11 磁盘至少 64GB
@@ -111,7 +121,7 @@ sudo qemu-img create -f qcow2 /home/zhoujianwei/libvirt-images/win11.qcow2 64G
 
 > qcow2 是精简格式，64G 只是上限，实际占用随使用量增长。
 
-## 3. virt-install 创建虚拟机
+## 4. virt-install 创建虚拟机
 
 ```bash
 sudo virt-install \
@@ -145,7 +155,7 @@ sudo virt-install \
 
 > 💡 桌面版用户也可以用 `virt-manager` 图形界面创建：选择 ISO → 分配 CPU/内存 → 创建磁盘（建议 50GB+）→ 完成。但 Server 环境下命令行是唯一选择，而且一次把 UEFI/TPM/virtio 都配好，反而省心。
 
-## 4. 连接控制台安装系统
+## 5. 连接控制台安装系统
 
 用 VNC 客户端连宿主机的 5900 端口（没有图形界面的 Server 上，在局域网内任意一台电脑装个 VNC 客户端连过来即可）。
 
